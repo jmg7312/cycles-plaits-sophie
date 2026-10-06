@@ -32,8 +32,9 @@ TUNE), call the engine, and then run the **stock** amp envelope, VCA and PUNCH s
 TONE machine sets them up. So DECAY, PUNCH and GATE behave as on any stock machine.
 
 **What is missing:** adding the machines to the OS's machine list (names, knob descriptors, MACHINES
-screen). That is what Modded-Cycles' generator does for its Syntakt engines; this code is meant to be
-plugged into it. Nothing here builds a flashable firmware.
+screen). Existing mods already do that for their own machines (Modded-Cycles for its Syntakt engines,
+Model-TG for its Sampler); the same has to be done for these. Nothing here builds a flashable firmware,
+and where this code should end up is an open question.
 
 ## The machines
 
