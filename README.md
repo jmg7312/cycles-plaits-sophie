@@ -83,14 +83,14 @@ alone, with no voice, is 1610). It is an instruction count, not a time on hardwa
 
 | Stock machine | | Plaits | | Sophie | |
 |---|---|---|---|---|---|
-| TONE | 5291 | PL_WSHAP | 5316 | SO_FUSE | 5285 |
-| PERC | 6079 | PL_NOISE | 5363 | SO_PIPE | 5486 |
-| METAL | 6431 | PL_2OPFM | 5436 | SO_BOOM | 5638 |
-| SNARE | 7157 | PL_SNARE | 6786 | SO_SHARD | 6153 |
-| KICK | 7416 | PL_GRAIN | 7401 | | |
-| CHORD | 8294 | PL_HIHAT | 7629 | | |
-| | | PL_BDRUM | 8160 | | |
-| | | PL_PARTC | 9166 | | |
+| TONE | 5291 | PL_WSHAP | 5343 | SO_FUSE | 5579 |
+| PERC | 6079 | PL_NOISE | 5390 | SO_PIPE | 5780 |
+| METAL | 6431 | PL_2OPFM | 5463 | SO_BOOM | 5932 |
+| SNARE | 7157 | PL_SNARE | 6813 | SO_SHARD | 6447 |
+| KICK | 7416 | PL_GRAIN | 7428 | | |
+| CHORD | 8294 | PL_HIHAT | 7656 | | |
+| | | PL_BDRUM | 8187 | | |
+| | | PL_PARTC | 9193 | | |
 
 **Level**: peak after the stock amp chain, as a fraction of full scale. Stock machines 0.076-0.212;
 Plaits machines 0.044-0.125; Sophie machines 0.055-0.068.
