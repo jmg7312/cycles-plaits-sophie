@@ -8,9 +8,9 @@ MAIN OS is read from YOUR official model-cycles_OS1.13.syx.
 
     python3 test/play_machines.py --modded PATH/TO/Modded-Cycles --cycles model-cycles_OS1.13.syx [--cost] [--fast]
 
-For each of the 12 machines: a 0.5 s note (note 60, default knobs) written to out/<machine>.wav, its peak
-level, and for the pitched ones the measured frequency. MACRO machines are played twice: COLOR = 0 (the
-engine's OUT) and COLOR = 127 (its AUX output).
+For each of the 12 engines (MACRO's eight, SOPHIE's four models; the COLOR knob picks one): a 0.5 s note
+(note 60, default knobs) written to out/<machine>-<engine>.wav, its peak level, and for the pitched ones the
+measured frequency.
 
 --cost  also counts the instructions per 32-sample block for one voice, for every machine here and for the
         six stock machines (slow).
@@ -36,7 +36,7 @@ IDLE_LOOP = None
 MACRO = [('WSHAPE', 'wshape'), ('2OP FM', '2opfm'), ('NOISE', 'noise'), ('PARTCL', 'partcl'),
           ('BDRUM', 'bdrum'), ('SNARE', 'snare'), ('HIHAT', 'hihat'), ('GRAIN', 'grain')]
 SOPHIE = ['fuse', 'boom', 'pipe', 'shard']
-PITCHED = {'MA_WSHAP', 'MA_2OPFM', 'MA_GRAIN'}
+PITCHED = {'WSHAPE', '2OP FM', 'GRAIN'}
 
 
 def main_os(modded, syx):
@@ -119,19 +119,17 @@ def main():
 
     cases = []
     psym, pblob = load('macro')
-    for label, fn in MACRO:
-        name = 'MA_' + label.replace(' ', '')[:5]
-        for color, tag in ((0, 'out'), (127, 'aux')):
-            cases.append((name, tag, pblob, psym, psym['macro_cycles_update_' + fn], psym['macro_cycles_render'],
-                          dict(color=color, shape=64, sweep=64, contour=64, decay=80)))
+    for n, (label, fn) in enumerate(MACRO):          # COLOR picks the engine, in zones of 8
+        cases.append(('MACRO', label, pblob, psym, psym['macro_cycles_update'], psym['macro_cycles_render'],
+                      dict(color=8 * n + 4, shape=64, sweep=64, contour=64, decay=80)))
     ssym, sblob = load('sophie')
-    for m in SOPHIE:
-        cases.append(('SO_' + m.upper(), '', sblob, ssym, ssym['sophie_update_' + m], ssym['sophie_render'],
-                      dict(color=64, shape=64, sweep=64, contour=32, decay=80)))
+    for n, m in enumerate(SOPHIE):                   # COLOR picks the model, in zones of 32
+        cases.append(('SOPHIE', m.upper(), sblob, ssym, ssym['sophie_cycles_update'], ssym['sophie_cycles_render'],
+                      dict(color=32 * n + 16, shape=64, sweep=64, contour=64, decay=80)))
 
     os.makedirs(args.out, exist_ok=True)
     failed = 0
-    print('%-9s %-3s  %6s  %9s  %s' % ('machine', 'out', 'peak', 'frequency', 'emulation'))
+    print('%-7s %-7s  %6s  %9s  %s' % ('machine', 'engine', 'peak', 'frequency', 'emulation'))
     for name, tag, blob, sym, up, re, knobs in cases:
         eng = engine(blob, sym, up, re)
         eng.set(0, machine=SLOT, note=60, punch=0, **knobs)
@@ -139,11 +137,11 @@ def main():
         x = eng.render(750, trig_at=(0,), track=0)
         dt = time.time() - t0
         peak = float(np.max(np.abs(x))) / 2**31
-        f = frequency(x, np) if name in PITCHED and tag != 'aux' else None
+        f = frequency(x, np) if tag in PITCHED else None
         ok = peak > 0.01 and not eng.unmapped and (f is None or abs(f / 261.63 - 1) < 0.015)
         failed += not ok
-        mcengine.wav(os.path.join(args.out, (name + ('-' + tag if tag else '') + '.wav').lower()), x)
-        print('%-9s %-3s  %6.3f  %9s  %.2f s%s' % (name, tag, peak, ('%.1f Hz' % f) if f else '-', dt,
+        mcengine.wav(os.path.join(args.out, (name + '-' + tag.replace(' ', '') + '.wav').lower()), x)
+        print('%-7s %-7s  %6.3f  %9s  %.2f s%s' % (name, tag, peak, ('%.1f Hz' % f) if f else '-', dt,
                                                  '' if ok else '   <-- FAILED (unmapped accesses: %d)' % len(eng.unmapped)))
 
     if args.cost:
@@ -171,14 +169,11 @@ def main():
         for nm, m in mcengine.MACH.items():
             print('  stock %-8s %6.0f' % (nm, cost(lambda m=m: stock(m)) - idle))
         for name, tag, blob, sym, up, re, knobs in cases:
-            if tag == 'aux':
-                continue
-
             def make(blob=blob, sym=sym, up=up, re=re, knobs=knobs):
                 eng = engine(blob, sym, up, re)
                 eng.set(0, machine=SLOT, note=60, punch=0, **knobs)
                 return eng
-            print('  %-14s %6.0f' % (name, cost(make) - idle))
+            print('  %-14s %6.0f' % (name + ' ' + tag, cost(make) - idle))
 
     print('\n%d machine runs, %d failed; .wav files in %s' % (len(cases), failed, os.path.abspath(args.out)))
     sys.exit(1 if failed else 0)

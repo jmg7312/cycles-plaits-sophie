@@ -17,10 +17,13 @@
  *   render(out, v)     : writes 32 samples (int32, Q31) to out.
  *   v + 0x38 != 0      : the block where a note starts.
  *
- * One machine per engine (the engine does not take a knob; a machine lock changes it per step):
+ * One machine, eight engines, as on the Digitakt (digi1_mods' MACRO): the first sound knob picks the engine,
+ * so a parameter lock on it changes the engine per step. The OS allows few added machines (see
+ * docs/MODEL-CYCLES-NOTES.md, section 5), so a family of engines shares one machine.
  *   WSHAPE, 2OP FM, NOISE, PARTCL, BDRUM, SNARE, HIHAT, GRAIN.
  * Knobs:
- *   COLOR   = AUX        0-55 the engine's OUT, 72-127 its AUX output, 56-71 a crossfade
+ *   COLOR   = ENGN       the engine, in zones of 8 values (0-7 WSHAPE, 8-15 2OP FM, ...), as digi1_mods'
+ *                        knob B; read at each note start
  *   SHAPE   = HARMONICS
  *   SWEEP   = TIMBRE
  *   CONTOUR = MORPH
@@ -70,7 +73,7 @@ static int32 clamp7(int32 x)
     return x < 0 ? 0 : x > 127 ? 127 : x;
 }
 
-static void update(int32 pmod, void *v, const void *p, int32 engine)
+void macro_cycles_update(int32 pmod, void *v, const void *p)
 {
     uint32 t = ((uint32)v - VOICE0) / VSTRIDE;
     struct track *d;
@@ -85,11 +88,11 @@ static void update(int32 pmod, void *v, const void *p, int32 engine)
         d->init = 1;
     }
 
-    d->prm[MACRO_P_ENGINE] = (uint8)((engine << MACRO_ZONE_SHIFT) + 4);
+    d->prm[MACRO_P_ENGINE] = (uint8)clamp7(P16(p, 0x16) >> 8);
     d->prm[MACRO_P_HARM]   = (uint8)clamp7(P16(p, 0x18) >> 8);
     d->prm[MACRO_P_TIMB]   = (uint8)clamp7(P16(p, 0x1a) >> 8);
     d->prm[MACRO_P_MORPH]  = (uint8)clamp7(P16(p, 0x1c) >> 8);
-    d->prm[MACRO_P_AUX]    = (uint8)clamp7(P16(p, 0x16) >> 8);
+    d->prm[MACRO_P_AUX]    = 0;                 /* the engine's OUT; its AUX output is not mapped yet */
 
     /* Pitch, as the stock pitch code (0x400a7e6c) computes it: the trig's note + PITCH (8.8, 64 = centre,
      * semitones) + FINE TUNE (8.8, 64 = centre). Q16 semitones. */
@@ -130,15 +133,6 @@ static void update(int32 pmod, void *v, const void *p, int32 engine)
         macro_trig(&d->mv);
     }
 }
-
-void macro_cycles_update_wshape(int32 pmod, void *v, const void *p) { update(pmod, v, p, MACRO_WSH); }
-void macro_cycles_update_2opfm(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_FM); }
-void macro_cycles_update_noise(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_NOISE); }
-void macro_cycles_update_partcl(int32 pmod, void *v, const void *p) { update(pmod, v, p, MACRO_PARTICLE); }
-void macro_cycles_update_bdrum(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_BD); }
-void macro_cycles_update_snare(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_SD); }
-void macro_cycles_update_hihat(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_HH); }
-void macro_cycles_update_grain(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_GRAIN); }
 
 void macro_cycles_render(int32 *out, void *v)
 {

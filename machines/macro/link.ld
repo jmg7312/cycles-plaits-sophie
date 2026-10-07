@@ -6,7 +6,7 @@ SECTIONS
 {
   . = 0x43000000;
   _start = .;
-  .text   : { KEEP(*(.text.macro_cycles_render)) KEEP(*(.text.macro_cycles_update_*)) *(.text*) }
+  .text   : { KEEP(*(.text.macro_cycles_render)) KEEP(*(.text.macro_cycles_update)) *(.text*) }
   . = ALIGN(4);
   _code_end = .;
   .rodata : { *(.rodata*) }

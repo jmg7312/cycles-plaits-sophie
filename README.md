@@ -1,8 +1,8 @@
 # MACRO and Sophie machines for the Elektron Model:Cycles
 
-Twelve extra synth machines for the Model:Cycles (OS 1.13): the eight **MACRO** engines of digi1_mods
-(ported from Plaits) and the four models of **Sophie**, running inside the Cycles' own voice loop next to
-the stock FM machines.
+Two extra synth machines for the Model:Cycles (OS 1.13), twelve engines in all: **MACRO**, the eight
+engines of digi1_mods' machine of that name (ported from Plaits), and **SOPHIE**, with its four models.
+They run inside the Cycles' own voice loop next to the stock FM machines.
 
 > **Status: emulation only. This has NOT been flashed to or tested on a real Model:Cycles.**
 > Everything below was measured in [Modded-Cycles](https://github.com/18nelli18/Modded-Cycles)' emulation
@@ -44,59 +44,65 @@ tables and contract, UI and MIDI entry points, what existing mods occupy), each 
 
 ## The machines
 
-One machine per engine. The engine does not take a knob; to change engine per step, use a machine lock.
+Two machines. In each, **the COLOR knob picks the engine**, so a parameter lock on COLOR changes the engine
+per step. This follows digi1_mods' MACRO on the Digitakt, where the first machine knob does the same. The
+reason is a limit of the OS: with the known method, about ten machines can be added in all, every mod
+together (see [docs/MODEL-CYCLES-NOTES.md](docs/MODEL-CYCLES-NOTES.md), section 5), so a family of engines
+shares one machine.
 
-| Menu name | Engine (digi1_mods' name) | What it is |
+| Machine | COLOR value | Engine |
 |---|---|---|
-| `MA_WSHAP` | WSHAPE | waveshaping oscillator |
-| `MA_2OPFM` | 2OP FM | two-operator FM |
-| `MA_NOISE` | NOISE | filtered clocked noise |
-| `MA_PARTC` | PARTCL | particle noise |
-| `MA_BDRUM` | BDRUM | bass drum |
-| `MA_SNARE` | SNARE | snare drum |
-| `MA_HIHAT` | HIHAT | hi-hat |
-| `MA_GRAIN` | GRAIN | granular formant oscillator |
-| `SO_FUSE` | FUSE | Sophie model 0 |
-| `SO_BOOM` | BOOM | Sophie model 1 |
-| `SO_PIPE` | PIPE | Sophie model 2 |
-| `SO_SHARD` | SHARD | Sophie model 3 |
+| MACRO | 0-7 | WSHAPE, waveshaping oscillator |
+| | 8-15 | 2OP FM, two-operator FM |
+| | 16-23 | NOISE, filtered clocked noise |
+| | 24-31 | PARTCL, particle noise |
+| | 32-39 | BDRUM, bass drum |
+| | 40-47 | SNARE, snare drum |
+| | 48-55 | HIHAT, hi-hat |
+| | 56-127 | GRAIN, granular formant oscillator |
+| SOPHIE | 0-31 | FUSE |
+| | 32-63 | BOOM |
+| | 64-95 | PIPE |
+| | 96-127 | SHARD |
 
-The names are a proposal: a two-letter prefix per family (`MA_` for MACRO, `SO_` for Sophie; `SK_` would
-suit the Syntakt engines) and five letters. **Whether eight characters fit the MACHINES screen has not been checked**; five
-are known to fit.
+MACRO's zones are digi1_mods' (eight values per engine, the last engine filling the rest, so a saved value
+keeps its engine when engines are added). The engine is read at each note start.
 
 ### Knobs
 
-| Knob | MACRO machines | Sophie machines |
+| Knob | MACRO | SOPHIE |
 |---|---|---|
 | PITCH | pitch (as stock) | pitch (as stock) |
 | DECAY | amp decay (stock envelope) | amp decay (stock envelope) |
-| COLOR | **AUX**: 0-55 the engine's OUT, 72-127 its AUX output, 56-71 crossfade | **COLOR** |
+| COLOR | **ENGN**: the engine | **MODEL**: the model |
 | SHAPE | **HARMONICS** | **METAL** |
 | SWEEP | **TIMBRE** | **SWEEP** (bipolar, 64 = centre) |
-| CONTOUR | **MORPH** | **FBK** (feedback) |
+| CONTOUR | **MORPH** | **COLOR** (Sophie's own: inharmonic character) |
 | PUNCH, GATE | as stock | as stock |
 
-Not mapped yet for Sophie: **FOLD** (its wavefolder) is off and velocity is fixed at 127. The plan for FOLD
-is a second layer on the SHAPE knob, hold PRESET MENU and turn SHAPE, the way Model-TG puts Attack on DECAY.
+Not mapped yet: MACRO's **AUX** output (the engines play their OUT); Sophie's **FBK** (fixed at 32), **FOLD**
+(its wavefolder, off) and velocity (fixed at 127). The plan is a second layer on the knobs, hold PRESET MENU
+and turn one, the way Model-TG puts Attack on DECAY.
 
 ## Measurements (emulation)
 
-Note 60, default knobs (MACRO: HARMONICS/TIMBRE/MORPH 64; Sophie: 64/64/64, FBK 32), DECAY 80.
+Note 60, default knobs (all at 64, COLOR in the middle of the engine's zone), DECAY 80. The cost table was
+measured with one machine per engine, before the engines were grouped; the grouped machines run the same
+engine code.
 
 **Cost**: instructions per 32-sample block for one voice, counted in the emulated voice loop (the loop
 alone, with no voice, is 1610). It is an instruction count, not a time on hardware.
 
 | Stock machine | | MACRO | | Sophie | |
 |---|---|---|---|---|---|
-| TONE | 5291 | MA_WSHAP | 5343 | SO_FUSE | 5579 |
-| PERC | 6079 | MA_NOISE | 5390 | SO_PIPE | 5780 |
-| METAL | 6431 | MA_2OPFM | 5463 | SO_BOOM | 5932 |
-| SNARE | 7157 | MA_SNARE | 6813 | SO_SHARD | 6447 |
-| KICK | 7416 | MA_GRAIN | 7428 | | |
-| CHORD | 8294 | MA_HIHAT | 7656 | | |
-| | | MA_BDRUM | 8187 | | |
-| | | MA_PARTC | 9193 | | |
+| TONE | 5291 | WSHAPE | 5343 | FUSE | 5579 |
+| PERC | 6079 | NOISE | 5390 | PIPE | 5780 |
+| METAL | 6431 | 2OP FM | 5463 | BOOM | 5932 |
+| SNARE | 7157 | SNARE | 6813 | SHARD | 6447 |
+| KICK | 7416 | GRAIN | 7428 | | |
+| CHORD | 8294 | HIHAT | 7656 | | |
+| | | BDRUM | 8187 | | |
+| | | PARTCL | 9193 | | |
 
 **Level**: peak after the stock amp chain, as a fraction of full scale. Stock machines 0.076-0.212;
 MACRO machines 0.044-0.125; Sophie machines 0.055-0.068.
@@ -130,8 +136,8 @@ python3 test/play_machines.py --modded ../Modded-Cycles --cycles model-cycles_OS
 ```
 
 In the emulated memory only, each machine takes SNARE's place in the OS's two machine tables and the
-module is loaded at `0x43000000`. For each machine the test plays a 0.5 s note, writes
-`out/<machine>.wav`, and checks that it sounds, that no memory access went astray, and (for the pitched
+module is loaded at `0x43000000`. For each of the twelve engines the test plays a 0.5 s note, writes
+`out/<machine>-<engine>.wav`, and checks that it sounds, that no memory access went astray, and (for the pitched
 ones) that the note is in tune. `--cost` adds the instruction counts above. The `.wav` files are normalised,
 so they do not show the level; the printed peak does.
 

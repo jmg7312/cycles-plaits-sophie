@@ -8,17 +8,18 @@
  *
  * Same machine contract as machines/macro/macro_cycles.c: update(pmod, v, p), then render(out, v).
  *
- * One machine per model: FUSE, BOOM, PIPE, SHARD (the model does not take a knob).
+ * One machine, four models (FUSE, BOOM, PIPE, SHARD): the first sound knob picks the model, so a parameter
+ * lock on it changes the model per step. Same rule as machines/macro: a family shares one machine.
  * Knobs:
- *   COLOR   = COLOR
+ *   COLOR   = MODEL      four zones of 32 values: 0-31 FUSE, 32-63 BOOM, 64-95 PIPE, 96-127 SHARD
  *   SHAPE   = METAL
  *   SWEEP   = SWEEP      bipolar, 64 = centre
- *   CONTOUR = FBK        oscillator feedback
+ *   CONTOUR = COLOR      Sophie's own COLOR (inharmonic character)
  *   PITCH, FINE TUNE, DECAY, PUNCH and GATE keep their stock meaning (stock amp envelope, VCA and punch
  *   stage, set up as the stock TONE machine does).
- * Not mapped yet: FOLD (Sophie's wavefolder) is off, and velocity is fixed at 127. The plan for FOLD is a
- * second layer on the SHAPE knob (hold the PRESET MENU key and turn SHAPE), the way Model-TG adds Attack
- * on the DECAY knob.
+ * Not mapped yet: FBK (feedback, fixed at 32), FOLD (the wavefolder, off) and velocity (fixed at 127). The
+ * plan for FBK and FOLD is a second layer on the knobs (hold the PRESET MENU key and turn one), the way
+ * Model-TG adds Attack on the DECAY knob.
  *
  * Status: runs in emulation (Modded-Cycles' tools/emu/mcengine.py). NOT tested on hardware.
  */
@@ -57,7 +58,7 @@ static int32 clamp7(int32 x)
     return x < 0 ? 0 : x > 127 ? 127 : x;
 }
 
-static void update(int32 pmod, void *v, const void *p, int32 model)
+void sophie_cycles_update(int32 pmod, void *v, const void *p)
 {
     uint32 t = ((uint32)v - VOICE0) / VSTRIDE;
     struct track *d;
@@ -78,11 +79,11 @@ static void update(int32 pmod, void *v, const void *p, int32 model)
         semis = 127 << 16;
     inc = (int32)(mono_pitch_inc(semis >> 9) >> 16);     /* Sophie: a 16-bit phase step per sample */
     d->prm.phase_inc = (uint16_t)(inc < 8 ? 8 : inc > 65535 ? 65535 : inc);
-    d->prm.model = (uint8)model;
-    d->prm.color = (uint8)clamp7(P16(p, 0x16) >> 8);
+    d->prm.model = (uint8)(clamp7(P16(p, 0x16) >> 8) >> 5);
+    d->prm.color = (uint8)clamp7(P16(p, 0x1c) >> 8);
     d->prm.metal = (uint8)clamp7(P16(p, 0x18) >> 8);
     d->prm.sweep = (int8_t)(clamp7(P16(p, 0x1a) >> 8) - 64);
-    d->prm.feedback = (uint8)clamp7(P16(p, 0x1c) >> 8);
+    d->prm.feedback = 32;
     d->prm.velocity = 127;
     d->prm.fold = 0;
 
@@ -118,12 +119,7 @@ static void update(int32 pmod, void *v, const void *p, int32 model)
     }
 }
 
-void sophie_update_fuse(int32 pmod, void *v, const void *p)  { update(pmod, v, p, 0); }
-void sophie_update_boom(int32 pmod, void *v, const void *p)  { update(pmod, v, p, 1); }
-void sophie_update_pipe(int32 pmod, void *v, const void *p)  { update(pmod, v, p, 2); }
-void sophie_update_shard(int32 pmod, void *v, const void *p) { update(pmod, v, p, 3); }
-
-void sophie_render(int32 *out, void *v)
+void sophie_cycles_render(int32 *out, void *v)
 {
     uint32 t = ((uint32)v - VOICE0) / VSTRIDE;
     struct track *d;
