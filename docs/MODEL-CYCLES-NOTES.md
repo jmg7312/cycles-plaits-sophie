@@ -199,9 +199,10 @@ level) and `+196` (before it). Wavetables are 257 x int32.
 
 ## 5. Adding a machine to the list
 
-This is the part our repository does **not** do. Modded-Cycles does it for its Syntakt engines and documents
-every place that depends on the number of machines: **[MC] note 18** (a 7th machine, 116 writes, six
-attempts on hardware) and notes 19 and 20 (more machines). In short, what has to change:
+Modded-Cycles does it for its Syntakt engines and documents every place that depends on the number of
+machines: **[MC] note 18** (a 7th machine, 116 writes, six attempts on hardware) and notes 19 and 20 (more
+machines). Since the beta firmware, this repository does it too, for MACRO and SOPHIE, with its own code
+(`firmware/`, `tools/make_firmware.py`): section 5.1 lists what it changes. In short, what has to change:
 
 - the voice loop: two bounds (`0x400A7DBA`, `0x400A7DF4`), the byte table `0x40118640`, and the two function
   tables, which are contiguous and have to be relocated to grow;
@@ -226,6 +227,28 @@ machines of this repository hold several engines each, picked by a knob.
 
 The screen shows the **long name** of a knob when it is turned, split at spaces, one word per line; words
 up to 8 letters fit. A 5-letter machine name is known to fit the MACHINES screen. [MC] note 18 §10
+
+### 5.1 What the beta firmware changes (machines 6 and 7, 113 places, 406 bytes)
+
+`python3 tools/make_firmware.py OFFICIAL.syx --list` prints every one with its address and bytes. All of it
+[MC] notes 17 to 20 unless marked **ours**; checked in emulation by `test/test_firmware.py` [M], not on
+hardware.
+
+| what | where | why |
+|---|---|---|
+| boot hook (3) | first 8 bytes of `0x400004B2` become a jump; its code (38 bytes) in the sprite mask `0x4016CAE8`, whose sprite (`0x400B1106`) now reads the identical mask `0x40154AE4` | copy the payload from the end of the image (`0x401AA140`) to `0x43000000` before the BSS, which contains it, is cleared. The copy includes the payload's state as zeros |
+| descriptor table (37) | every reference to `0x4010DCE0` (34), `+8` (1), `+0x20` (2) | the table cannot grow in place: a copy with 10 more entries lives in the payload. Entries 76-79 and 81-84 are the knobs of MACRO and SOPHIE, 80 and 85 their Amp Decay, all modelled on SNARE's (same slots, range, CCs 16-19, flags). "Algorithm" (41) goes up to 7 in the copy: that is what makes the machines selectable (menu, machine locks, CC 70) |
+| descriptor count (42) | the `moveq #76` / `#75` of the table's accessors | 86 / 85 |
+| rows built at boot (7 + 1) | references to `0x40A79418` (5) and `0x40A7ADA4` (2); size cleared at `0x4005A2B8` | machine/knob and machine/CC rows for 8 machines, in the payload. **Ours:** an empty row before and eight after, because the Amp Decay lookup (`0x4005A6B6`) does not check the machine |
+| machine count (11) | `0x400A7DBA`, `0x400A7DF4`, bytes 6-7 of `0x40118640`, `0x4005A6A6`, `0x400147A4`, `0x400148AA`, `0x400148B2`, `0x400A25E0`, `0x400A26A2`, `0x400A26E8`, and `0x4005A8F6` | highest machine 5 -> 7 in the voice loop, the knob lookup, the machine setter, the wheel, the MACHINES screen (8 marks starting 7 pixels further left), the CC lookup. **Ours:** the CC lookup is patched in place (the same compare, with the 7 loaded before it) instead of through a detour |
+| function tables, names (3) | `0x400A7D6C`, `0x400A7E16`, `0x400A2614` | update, render and name tables with 8 entries, in the payload |
+| "belongs to one machine" (1 + 2) | `0x4005A572`; `0x4005A340` and `0x4005A50A` replaced | a descriptor's machine field cannot say 7 (7 means every machine): ours carry 6, and two pieces of our code say which machine each belongs to |
+| state objects (2) | `0x4004DF40`, `0x4004DFA2` replaced | one state object per descriptor, 76 of them built at boot: ours use SNARE's |
+| per-machine records (2 + 1) | `0x4004DF5C`, `0x4004DF76` replaced; `0x4001E8DA` | two more records, built on first use from SNARE's; a machine that does not exist gets KICK's instead of a read before the table |
+| MACHINES screen picture (1) | `0x400A2638` | six pictures only. **Ours:** MACRO and SOPHIE show CHORD's, which is what the OS's other screens already show for a machine above CHORD, so those are left alone |
+
+The four replaced accessors keep `a0` and `a1` (**ours**): the stock ones are leaves that change `d0` and
+`d1` only, and callers compiled with them may rely on it.
 
 For a loader, this is the natural shared resource: one owner of the machine list that machine mods register
 with (what `digichain` and `core_machines` do on the Digitakt mk1). Today three independent mods patch
@@ -278,12 +301,18 @@ All [TG] unless tagged otherwise.
 | [elektron-model-tweaks](https://github.com/drumkilla/elektron-model-tweaks) | byte patches in section 3 | latching mute, trig preview, browser scroll, 16-channel USB audio |
 | [Model-TG](https://github.com/TinyGregAudio/Model-TG) | blob at `0x401AB750`, boot hook | machine 6 (Sampler), the voice loop dispatch, the key accessor, extra parameters on PRESET + knob, the sound record |
 | [Modded-Cycles](https://github.com/18nelli18/Modded-Cycles) | payload at `0x43000000` (or `0x46700000`), boot hook on `0x400004B2`, sprite masks | machines 6+ (Syntakt engines), the machine list and descriptors, a load governor in the voice loop, USB audio |
-| this repository | linked at `0x43000000` for the test | machines (not yet in the list) |
+| this repository (beta firmware) | payload at `0x43000000`, boot hook on `0x400004B2`, the sprite mask `0x4016CAE8` | machines 6 and 7 (MACRO, SOPHIE), the machine list and descriptors (section 5.1). Not to be combined with the two above |
 
 ## 9. What we do not know
 
 - `flash_at` / `flash_limit`, and anything else about the bootstrap beyond what [MC] note 17 says.
 - Whether the Model:Samples' addresses differ from the Cycles' (very likely: its main OS is another build).
-- How much stack the audio interrupt leaves to a machine written in C.
+- How much stack the audio interrupt really leaves to a machine. From reading the OS (not measured on
+  hardware): the interrupt does not switch stacks, the smallest task stack is 2 048 bytes, and the stock
+  machines use about 250 bytes below the voice loop [M]. Our MACRO adapter therefore runs its engine on a
+  stack of its own.
 - Real CPU time of anything: all our costs are instruction counts in emulation.
-- Whether an 8-character machine name fits the MACHINES screen.
+- Whether an 8-character machine name fits the MACHINES screen. Model-TG shows 6- and 7-character names
+  there [TG]; we rely on that for "SOPHIE".
+- Whether a project saved with machine 7 or 8 reloads as saved. [MC] note 20 reports a track that kept its
+  added machine's number across a reflash, so the number is stored as it is.
