@@ -5,7 +5,7 @@
 #define MACHINE_LIST_H
 
 #define ML_STOCK_MACHINES 6         /* KICK SNARE METAL PERC TONE CHORD */
-#define ML_ADDED          2         /* MACRO (machine 6), SOPHIE (machine 7) */
+#define ML_ADDED          2         /* Plaits (machine 6), Sophie (machine 7) */
 #define ML_MACHINES       8
 #define ML_STOCK_DESCS    76        /* parameter descriptors of the stock OS */
 #define ML_DESC_EACH      5         /* per added machine: COLOR SHAPE SWEEP CONTOUR, Amp Decay */

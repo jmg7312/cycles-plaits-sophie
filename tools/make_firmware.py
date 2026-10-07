@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Make a Model:Cycles firmware file with the MACRO and SOPHIE machines added to the machine list.
+"""Make a Model:Cycles firmware file with the Plaits and Sophie machines added to the machine list.
 
-    python3 tools/make_firmware.py model-cycles_OS1.13.syx -o cycles_macro_sophie_beta.syx
+    python3 tools/make_firmware.py model-cycles_OS1.13.syx -o cycles_plaits_sophie_beta.syx
 
 It reads YOUR official Model:Cycles OS 1.13 file (nothing else is accepted), adds the two machines after the
 six stock ones, and writes a .syx to send with Elektron Transfer. No Elektron code is distributed with this
@@ -40,13 +40,14 @@ IMAGE_LEN = 0x1a9d40                # its unpacked length
 STAGE = 0x40200000                  # the bootstrap puts the packed OS here: the unpacked one must end below
 
 # ---- the machines -----------------------------------------------------------------------------------------
+# name: on the MACHINES screen, written like the stock ones (Kick, Snare...), 7 letters at most.
 # knobs: COLOR, SHAPE, SWEEP, CONTOUR as (long name, short name, default). The screen shows the long name
 # when a knob is turned, one word per line, words of 8 letters at most.
 MACHINES = (
-    dict(name='MACRO', update='macro_cycles_update', render='macro_cycles_render', decay=80,
-         knobs=(('Macro Engine', 'ENGN', 4), ('Macro Harmonic', 'HARM', 64), ('Macro Timbre', 'TIMB', 64),
-                ('Macro Morph', 'MRPH', 64))),
-    dict(name='SOPHIE', update='sophie_cycles_update', render='sophie_cycles_render', decay=80,
+    dict(name='Plaits', update='macro_cycles_update', render='macro_cycles_render', decay=80,
+         knobs=(('Plaits Engine', 'ENGN', 4), ('Plaits Harmonic', 'HARM', 64), ('Plaits Timbre', 'TIMB', 64),
+                ('Plaits Morph', 'MRPH', 64))),
+    dict(name='Sophie', update='sophie_cycles_update', render='sophie_cycles_render', decay=80,
          knobs=(('Sophie Model', 'MODL', 16), ('Sophie Metal', 'METL', 64), ('Sophie Sweep', 'SWEP', 64),
                 ('Sophie Color', 'COLR', 64))),
 )
@@ -172,6 +173,8 @@ def build_payload(blob, sym, img):
     table[amax:amax + 4] = be32(TOP << 8)
     snare = lambda k: bytearray(img[DESC - BASE + (SNARE_DESC + k) * DSIZE:][:DSIZE])
     for m in MACHINES:
+        if not (m['name'].isalpha() and m['name'].isascii() and len(m['name']) <= 7):
+            die('machine name %s' % m['name'])
         for k, (long_, short, default) in enumerate(m['knobs']):
             if max(len(w) for w in long_.split(' ')) > 8 or not 0 <= default <= 127:
                 die('knob %s' % long_)
@@ -367,7 +370,7 @@ def check(syx, fw, new_main):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('official', help='your official model-cycles_OS1.13.syx')
-    ap.add_argument('-o', '--output', default='cycles_macro_sophie_beta.syx')
+    ap.add_argument('-o', '--output', default='cycles_plaits_sophie_beta.syx')
     ap.add_argument('--payload', default=os.path.join(HERE, '..', 'prebuilt'))
     ap.add_argument('--list', action='store_true')
     ap.add_argument('--report')

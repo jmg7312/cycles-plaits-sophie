@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Stress the MACRO machine with an engine switch on every trig, in the emulated Model:Cycles voice loop.
+"""Stress the Plaits machine with an engine switch on every trig, in the emulated Model:Cycles voice loop.
 
-Background: on the Digitakt mk1, heavy parameter-locking of MACRO's engine knob is reported to freeze the
+Background: on the Digitakt mk1, heavy parameter-locking of Plaits' engine knob is reported to freeze the
 unit. This test looks for what could do that on the Cycles: a block that never ends, a memory access gone
 astray, or a block whose cost jumps when the engine changes.
 

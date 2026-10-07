@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * hooks.S - MACRO and SOPHIE in the Model:Cycles machine list (OS 1.13): the entry points.
+ * hooks.S - Plaits and Sophie in the Model:Cycles machine list (OS 1.13): the entry points.
  *
  *   ml_boot          boot hook: copies the payload from the end of the OS image to its run address
  *   ml_*_entry       replace four OS accessors (the C functions of machine_list.c)

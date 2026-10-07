@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Play the MACRO and Sophie machines in the real Model:Cycles voice loop, emulated.
+"""Play the Plaits and Sophie machines in the real Model:Cycles voice loop, emulated.
 
 It uses Modded-Cycles' own bench, tools/emu/mcengine.py, unmodified. In the emulated memory only, each
 machine takes SNARE's place in the OS's two machine tables (render 0x40118614, update 0x4011862c) and the
@@ -8,7 +8,7 @@ MAIN OS is read from YOUR official model-cycles_OS1.13.syx.
 
     python3 test/play_machines.py --modded PATH/TO/Modded-Cycles --cycles model-cycles_OS1.13.syx [--cost] [--fast]
 
-For each of the 12 engines (MACRO's eight, SOPHIE's four models; the COLOR knob picks one): a 0.5 s note
+For each of the 12 engines (Plaits' eight, Sophie's four models; the COLOR knob picks one): a 0.5 s note
 (note 60, default knobs) written to out/<machine>-<engine>.wav, its peak level, and for the pitched ones the
 measured frequency.
 
@@ -33,9 +33,9 @@ RENDER_TAB, UPDATE_TAB = 0x40118610, 0x40118628
 SLOT = 1                                    # SNARE's index in the machine tables
 IDLE_LOOP = None
 
-MACRO = [('WSHAPE', 'wshape'), ('2OP FM', '2opfm'), ('NOISE', 'noise'), ('PARTCL', 'partcl'),
+PLAITS_ENGINES = [('WSHAPE', 'wshape'), ('2OP FM', '2opfm'), ('NOISE', 'noise'), ('PARTCL', 'partcl'),
           ('BDRUM', 'bdrum'), ('SNARE', 'snare'), ('HIHAT', 'hihat'), ('GRAIN', 'grain')]
-SOPHIE = ['fuse', 'boom', 'pipe', 'shard']
+SOPHIE_ENGINES = ['fuse', 'boom', 'pipe', 'shard']
 PITCHED = {'WSHAPE', '2OP FM', 'GRAIN'}
 
 
@@ -119,12 +119,12 @@ def main():
 
     cases = []
     psym, pblob = load('macro')
-    for n, (label, fn) in enumerate(MACRO):          # COLOR picks the engine, in zones of 8
-        cases.append(('MACRO', label, pblob, psym, psym['macro_cycles_update'], psym['macro_cycles_render'],
+    for n, (label, fn) in enumerate(PLAITS_ENGINES):          # COLOR picks the engine, in zones of 8
+        cases.append(('Plaits', label, pblob, psym, psym['macro_cycles_update'], psym['macro_cycles_render'],
                       dict(color=8 * n + 4, shape=64, sweep=64, contour=64, decay=80)))
     ssym, sblob = load('sophie')
-    for n, m in enumerate(SOPHIE):                   # COLOR picks the model, in zones of 32
-        cases.append(('SOPHIE', m.upper(), sblob, ssym, ssym['sophie_cycles_update'], ssym['sophie_cycles_render'],
+    for n, m in enumerate(SOPHIE_ENGINES):                   # COLOR picks the model, in zones of 32
+        cases.append(('Sophie', m.upper(), sblob, ssym, ssym['sophie_cycles_update'], ssym['sophie_cycles_render'],
                       dict(color=32 * n + 16, shape=64, sweep=64, contour=64, decay=80)))
 
     os.makedirs(args.out, exist_ok=True)

@@ -1,7 +1,7 @@
-# MACRO and Sophie machines for the Elektron Model:Cycles
+# Plaits and Sophie machines for the Elektron Model:Cycles
 
-Two extra synth machines for the Model:Cycles (OS 1.13), twelve engines in all: **MACRO**, the eight
-engines of digi1_mods' machine of that name (ported from Plaits), and **SOPHIE**, with its four models.
+Two extra synth machines for the Model:Cycles (OS 1.13), twelve engines in all: **Plaits**, eight
+engines of Plaits as ported by digi1_mods, and **Sophie**, with its four models.
 They run inside the Cycles' own voice loop next to the stock FM machines.
 
 > **Status: beta, emulation only. This has NOT been flashed to or tested on a real Model:Cycles.**
@@ -17,11 +17,15 @@ They run inside the Cycles' own voice loop next to the stock FM machines.
 The synthesis code is not ours. It already exists for this CPU (ColdFire MCF5441x, no FPU), made for the
 Digitakt mk1:
 
-- **MACRO**: `macro.c` from [digi1_mods](https://github.com/gdeo607/digi1_mods) (MIT), engines ported to
-  fixed point from [Plaits](https://github.com/pichenettes/eurorack) by Emilie Gillet (MIT). The machines
+- **Plaits**: `macro.c` from [digi1_mods](https://github.com/gdeo607/digi1_mods) (MIT), engines ported to
+  fixed point from [Plaits](https://github.com/pichenettes/eurorack) by Emilie Gillet (MIT). The engines
   keep the names digi1_mods gave them.
 - **Sophie**: `sophie.c` from [digisophie](https://github.com/soejrd/digisophie) (MIT), a fixed-point
   adaptation of [Sophie for Schwung](https://github.com/mestela/schwung-sophie) by Matt Estela (MIT).
+
+The Plaits machine carries engines of Plaits (Emilie Gillet, MIT) through `macro.c`, digi1_mods' fixed-point
+port. It was called MACRO in the first versions of this repository, after digi1_mods' machine; the files and
+symbols keep that name. It is not the MACRO machine of Modded-Cycles, which is a port of Braids.
 
 Both are copied here **unmodified** (`machines/*/third_party/`, with their licences), so the build needs
 nothing else.
@@ -36,7 +40,7 @@ They read the track's knobs, compute the pitch the way the stock pitch code does
 TUNE), call the engine, and then run the **stock** amp envelope, VCA and PUNCH stage, set up as the stock
 TONE machine sets them up. So DECAY, PUNCH and GATE behave as on any stock machine.
 
-The MACRO adapter calls `macro_render()` on **a stack of its own** (4 096 bytes, `machines/macro/private_stack.S`).
+The Plaits adapter calls `macro_render()` on **a stack of its own** (4 096 bytes, `machines/macro/private_stack.S`).
 The Cycles' audio interrupt does not switch stacks: it runs on the stack of whatever task it interrupted, the
 smallest of which is 2 048 bytes, and the stock machines use about 250 bytes of it. `macro_render()` needs up
 to 1 700. On its own stack it uses 1 556 bytes at most in our runs, and the adapter stays at 248 bytes on the
@@ -62,7 +66,7 @@ shares one machine.
 
 | Machine | COLOR value | Engine |
 |---|---|---|
-| MACRO | 0-7 | WSHAPE, waveshaping oscillator |
+| Plaits | 0-7 | WSHAPE, waveshaping oscillator |
 | | 8-15 | 2OP FM, two-operator FM |
 | | 16-23 | NOISE, filtered clocked noise |
 | | 24-31 | PARTCL, particle noise |
@@ -70,17 +74,17 @@ shares one machine.
 | | 40-47 | SNARE, snare drum |
 | | 48-55 | HIHAT, hi-hat |
 | | 56-127 | GRAIN, granular formant oscillator |
-| SOPHIE | 0-31 | FUSE |
+| Sophie | 0-31 | FUSE |
 | | 32-63 | BOOM |
 | | 64-95 | PIPE |
 | | 96-127 | SHARD |
 
-MACRO's zones are digi1_mods' (eight values per engine, the last engine filling the rest, so a saved value
+Plaits' zones are digi1_mods' (eight values per engine, the last engine filling the rest, so a saved value
 keeps its engine when engines are added). The engine is read at each note start.
 
 ### Knobs
 
-| Knob | MACRO | SOPHIE |
+| Knob | Plaits | Sophie |
 |---|---|---|
 | PITCH | pitch (as stock) | pitch (as stock) |
 | DECAY | amp decay (stock envelope) | amp decay (stock envelope) |
@@ -90,7 +94,7 @@ keeps its engine when engines are added). The engine is read at each note start.
 | CONTOUR | **MORPH** | **COLOR** (Sophie's own: inharmonic character) |
 | PUNCH, GATE | as stock | as stock |
 
-Not mapped yet: MACRO's **AUX** output (the engines play their OUT); Sophie's **FBK** (fixed at 32), **FOLD**
+Not mapped yet: Plaits' **AUX** output (the engines play their OUT); Sophie's **FBK** (fixed at 32), **FOLD**
 (its wavefolder, off) and velocity (fixed at 127). The plan is a second layer on the knobs, hold PRESET MENU
 and turn one, the way Model-TG puts Attack on DECAY.
 
@@ -107,7 +111,7 @@ and turn one, the way Model-TG puts Attack on DECAY.
 > - **Back up your projects** with Elektron Transfer first.
 > - **Do not combine** this firmware with Modded-Cycles or Model-TG, and do not load into it projects made
 >   with their added machines: every mod numbers its machines its own way.
-> - **Before going back to the official OS**, put every track of your projects that uses MACRO or SOPHIE
+> - **Before going back to the official OS**, put every track of your projects that uses Plaits or Sophie
 >   back on a stock machine and save. The official OS reads outside a table for a track left on a machine
 >   past CHORD; on a unit with Modded-Cycles' machines this froze the unit when MACHINES was pressed
 >   (its notes/20). If it happens anyway: STARTUP MENU, EMPTY RESET clears the active project.
@@ -119,12 +123,12 @@ You need Python 3 (nothing else) and your own official `model-cycles_OS1.13.syx`
 compiler: the machines' code is in `prebuilt/`.
 
 ```sh
-python3 tools/make_firmware.py model-cycles_OS1.13.syx -o cycles_macro_sophie_beta.syx
+python3 tools/make_firmware.py model-cycles_OS1.13.syx -o cycles_plaits_sophie_beta.syx
 ```
 
 It accepts only the official OS 1.13 file (sha256 `44fe5862...640c`), checks the file it wrote, and prints its
 sha256. With the `prebuilt/` of this commit the result is 948 512 bytes, sha256
-`84d792e242c21754bdd9613d14f8688f039b36cc985085cf9773ddee0547c0d7`. If yours differs, do not flash it, and
+`e75aa2f351fc9b167d7585ad003b62e155f673d9812463efc4261e5bf8eae49a`. If yours differs, do not flash it, and
 say so in your report. `--list` prints the 113 changes made to the OS, each with its reason. Nothing of
 Elektron's is in this repository or in the tool: the OS comes from your file.
 
@@ -134,11 +138,11 @@ restore.
 
 ### What it does
 
-- The official OS 1.13, plus **MACRO** as machine 7 and **SOPHIE** as machine 8, after KICK, SNARE, METAL,
+- The official OS 1.13, plus **Plaits** as machine 7 and **Sophie** as machine 8, after KICK, SNARE, METAL,
   PERC, TONE and CHORD on the MACHINES screen. Nothing else is added or changed: no other engine, no audio
   routing, no new screen.
-- Choosing one sets its knobs to defaults: MACRO COLOR 4 (WSHAPE), SOPHIE COLOR 16 (FUSE), SHAPE, SWEEP and
-  CONTOUR 64, DECAY 80. Turning a knob shows its name: Macro Engine, Macro Harmonic, Macro Timbre, Macro
+- Choosing one sets its knobs to defaults: Plaits COLOR 4 (WSHAPE), Sophie COLOR 16 (FUSE), SHAPE, SWEEP and
+  CONTOUR 64, DECAY 80. Turning a knob shows its name: Plaits Engine, Plaits Harmonic, Plaits Timbre, Macro
   Morph; Sophie Model, Sophie Metal, Sophie Sweep, Sophie Color.
 - Both show CHORD's picture: the OS has six pictures and none was added.
 - Machine locks, CC 70 (machine, values 6 and 7) and CCs 16 to 19 go through the same tables as for the stock
@@ -164,7 +168,7 @@ emulation, next to the stock OS (44 checks, all passing):
   machines; stack use.
 
 **Not checked, because it cannot be emulated:** the unit booting as a whole; the screen as you see it (only
-the drawing calls are intercepted: whether "SOPHIE" fits is taken from Model-TG, which shows 6- and
+the drawing calls are intercepted: whether "Sophie" fits is taken from Model-TG, which shows 6- and
 7-letter names there); real CPU time and audio dropouts; saving and loading a project or a preset on the
 internal storage; MIDI in and out; the LFO on the new knobs; USB audio; anything that happens after hours of
 use. That is what the beta test is for.
@@ -178,7 +182,7 @@ engine code.
 **Cost**: instructions per 32-sample block for one voice, counted in the emulated voice loop (the loop
 alone, with no voice, is 1610). It is an instruction count, not a time on hardware.
 
-| Stock machine | | MACRO | | Sophie | |
+| Stock machine | | Plaits | | Sophie | |
 |---|---|---|---|---|---|
 | TONE | 5291 | WSHAPE | 5343 | FUSE | 5579 |
 | PERC | 6079 | NOISE | 5390 | PIPE | 5780 |
@@ -190,12 +194,12 @@ alone, with no voice, is 1610). It is an instruction count, not a time on hardwa
 | | | PARTCL | 9193 | | |
 
 **Level**: peak after the stock amp chain, as a fraction of full scale. Stock machines 0.076-0.212;
-MACRO machines 0.044-0.125; Sophie machines 0.055-0.068.
+Plaits machines 0.044-0.125; Sophie machines 0.055-0.068.
 
 **Pitch**: note 60 plays 262-264 Hz (expected 261.6; the measurement is to the nearest sample period).
 PITCH +12 gives 522 Hz, -12 gives 131 Hz; FINE TUNE +32 is one semitone.
 
-**Size**: MACRO 38 kB of code, 7.6 kB of tables, 1.7 kB of state for six voices and 4 kB of private stack.
+**Size**: Plaits 38 kB of code, 7.6 kB of tables, 1.7 kB of state for six voices and 4 kB of private stack.
 Sophie 4.5 kB of code, 2.6 kB of tables, 0.6 kB of state. The code runs at `0x43000000`, the free SDRAM above
 the OS's BSS that Modded-Cycles uses for its payload. Nothing is placed in the fast internal SRAM.
 
@@ -250,7 +254,7 @@ to save and restore the EMAC state around its own use. The test adds it at run t
 ## Layout
 
 ```
-machines/macro/macro_cycles.c        the MACRO adapter
+machines/macro/macro_cycles.c        the Plaits adapter
 machines/macro/private_stack.S       calls macro_render() on a stack of its own
 machines/macro/link.ld
 machines/macro/third_party/digi1_mods/    macro.c, mono.c and their headers, unmodified (MIT)
@@ -264,7 +268,7 @@ tools/mtlib/                         the OS file format, from elektron-model-twe
 build.sh
 test/test_firmware.py                the firmware, checked in emulation from the file the tool writes
 test/play_machines.py                the machines alone
-test/stress_engine_switch.py         MACRO with an engine switch on every trig
+test/stress_engine_switch.py         Plaits with an engine switch on every trig
 docs/BETA-TEST.md                    for beta testers
 docs/MODEL-CYCLES-NOTES.md           notes on the OS for loader and firmware authors
 THIRD_PARTY.md

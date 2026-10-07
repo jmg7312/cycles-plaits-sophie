@@ -10,8 +10,9 @@ Copied unmodified (line endings normalised to LF), each with its licence file ne
 - Licence: MIT, Copyright (c) 2026 the digi1_mods authors (`LICENSE` in that folder).
 - `macro.c` restates Plaits (<https://github.com/pichenettes/eurorack>, `plaits/dsp`) in fixed point:
   Copyright 2016 Emilie Gillet, MIT. The licence text is at the top of `macro.c` and `macro_tables.h`.
-  Plaits is a Mutable Instruments product; this is an unofficial use of its published code, and following
-  its author's guidelines for derivative works the machines here do not carry the module's name.
+  Plaits is a Mutable Instruments product; this is an unofficial use of its published code, not affiliated
+  with or endorsed by Mutable Instruments. The machine is called Plaits on the Model:Cycles' screen, after
+  the code it carries (it was MACRO, digi1_mods' name, in the first versions of this repository).
 
 ## digisophie: Sophie for Digitakt
 

@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * macro_cycles.c - the MACRO engines as Model:Cycles machines (OS 1.13).
+ * macro_cycles.c - the Plaits machine of the Model:Cycles (OS 1.13): digi1_mods' MACRO engines.
  *
  * This file is only the adapter between the Model:Cycles voice loop and the synthesis code. The synthesis
  * is not here: it is third_party/digi1_mods/macro.c, digi1_mods' MACRO machine for the Digitakt mk1 (MIT):
  * engines ported to fixed point from Plaits by Emilie Gillet (MIT). That code is used unmodified, and the
- * machines keep the names digi1_mods gave them.
+ * engines keep the names digi1_mods gave them.
  *
  * Machine contract of the Model:Cycles (OS 1.13), as documented in Modded-Cycles (notes/14) and checked
  * against the stock machines:

@@ -12,7 +12,7 @@ stock OS next to it for comparison:
   boot      the bootstrap's own unpacker reads the packed OS; the boot hook installs the payload
   tables    the tables the OS builds at boot; every lookup by machine, knob, CC or descriptor
   screens   MACHINES screen, wheel, machine change with its default values, main-screen knobs
-  sound     the six stock machines sample for sample; MACRO and SOPHIE through their own machine numbers;
+  sound     the six stock machines sample for sample; Plaits and Sophie through their own machine numbers;
             how deep the added machines go on the stack
   projects  what a sound saved with machine 7 or 8 does, here and on the stock OS
 
@@ -443,7 +443,10 @@ def screens(stock, new, payload, sram, rep):
         if 6 <= m < 8:
             print('         machine %d: stock shows %s and no picture; modified shows "%s", picture %d (CHORD), mark %d of %d full'
                   % (m + 1, ta, tb[0], pb[0][1] + 1, m + 1, len(mb)))
-    check(ok, 'MACHINES screen, machines 1-10: names and pictures of 1-6 as stock; 7 = "%s", 8 = "%s"; 8 marks, x %d to %d, in the right half; past 8: "Error", as stock past 6'
+    drawn = set(''.join(NAMES)) | {c for d in range(76) for c in a.cstr(a.u32(DESC + d * 0x38 + 0x2c))}
+    ok &= all(n.isalpha() and len(n) <= 7 and set(n) <= drawn for n in names[6:])
+    check(ok, 'MACHINES screen, machines 1-10: names and pictures of 1-6 as stock; 7 = "%s", 8 = "%s"; 8 marks, x %d to %d, in the right half; past 8: "Error", as stock past 6;\n'
+          '         the new names are 7 letters at most and use only letters found in the stock machine and knob names (their width on the screen is NOT measured)'
           % (names[6], names[7], mb[0][1], mb[-1][3]))
 
     # setting a track's machine
@@ -521,7 +524,7 @@ def screens(stock, new, payload, sram, rep):
     ok &= all(app['new', m][76:] == [first.get(m) is not None and first[m] <= d < first[m] + 4 or d in (80, 85) and app['new', m][55]
                                     for d in range(76, 86)] for m in range(8))
     ok &= not any(app['new', 6][46:50] + app['new', 6][51:55] + app['new', 7][51:55]) and all(app['new', 1][51:55])
-    check(ok, 'descriptor applies to a track (0x4000aa9a), machines 1-8 x 86 descriptors: 0-75 as stock; the knobs of MACRO apply to machine 7 only, those of SOPHIE to machine 8 only')
+    check(ok, 'descriptor applies to a track (0x4000aa9a), machines 1-8 x 86 descriptors: 0-75 as stock; the knobs of Plaits apply to machine 7 only, those of Sophie to machine 8 only')
 
     # the real machine change, through the MACHINES screen's handler (0x400a2712 -> 0x4001488a -> 0x4001477e ->
     # 0x40014072): the new machine's default values are written into the sound
@@ -542,8 +545,8 @@ def screens(stock, new, payload, sram, rep):
             x.call(0x400a2712, this, step, 0, 0)
             out.append((machine_of(x, snd), knobs_of(x, snd)))
         return out, bool(x.bad)
-    up, bad_up = turn(new, payload, 4, [1, 1, 1, 1])                # TONE -> CHORD -> MACRO -> SOPHIE -> stays
-    down, bad_down = turn(new, payload, 7, [-1, -1, -1])            # SOPHIE -> MACRO -> CHORD -> TONE
+    up, bad_up = turn(new, payload, 4, [1, 1, 1, 1])                # TONE -> CHORD -> Plaits -> Sophie -> stays
+    down, bad_down = turn(new, payload, 7, [-1, -1, -1])            # Sophie -> Plaits -> CHORD -> TONE
     ref_up, bad_ref = turn(stock, b'', 4, [1, 1])                   # stock: TONE -> CHORD -> stays
     ref_down, bad_ref2 = turn(stock, b'', 5, [-1])                  # stock: CHORD -> TONE
     want = {m['index']: [k[2] for k in m['knobs']] + [m['decay']] for m in machines}
@@ -578,9 +581,13 @@ def screens(stock, new, payload, sram, rep):
 
 
 # ---- sound ------------------------------------------------------------------------------------------------
-MACRO = ['WSHAPE', '2OP FM', 'NOISE', 'PARTCL', 'BDRUM', 'SNARE', 'HIHAT', 'GRAIN']
-SOPHIE = ['FUSE', 'BOOM', 'PIPE', 'SHARD']
+PLAITS_ENGINES = ['WSHAPE', '2OP FM', 'NOISE', 'PARTCL', 'BDRUM', 'SNARE', 'HIHAT', 'GRAIN']
+SOPHIE_ENGINES = ['FUSE', 'BOOM', 'PIPE', 'SHARD']
 PITCHED = {'WSHAPE', '2OP FM', 'GRAIN'}
+
+
+def is_plaits(m):
+    return m['update'].startswith('macro')
 
 
 def frequency(x):
@@ -643,13 +650,13 @@ def sound(stock, new, payload, rep, out_dir):
     check(np.array_equal(res[0][0], res[1][0]) and not res[1][1] and res[1][2] == 0 and np.all(np.max(np.abs(res[0][0]), axis=1) > 2**24),
           'six tracks, one stock machine each, retriggered: all six outputs identical to stock; not one instruction of the payload runs (%d)' % res[1][2])
 
-    # MACRO and SOPHIE through their own machine numbers
+    # Plaits and Sophie through their own machine numbers
     os.makedirs(out_dir, exist_ok=True)
     print('         %-7s %-7s %6s  %s' % ('machine', 'engine', 'peak', 'frequency'))
     ok = True
     for m in rep['machines']:
-        engines = MACRO if m['name'] == 'MACRO' else SOPHIE
-        zone = 128 // (16 if m['name'] == 'MACRO' else 4)
+        engines = PLAITS_ENGINES if is_plaits(m) else SOPHIE_ENGINES
+        zone = 128 // (16 if is_plaits(m) else 4)
         for n, label in enumerate(engines):
             eng = engine(new, payload, only=0)
             eng.set(0, machine=m['index'], note=60, punch=0, color=zone * n + zone // 2, shape=64, sweep=64, contour=64, decay=80)
@@ -660,7 +667,7 @@ def sound(stock, new, payload, rep, out_dir):
             ok &= good
             mcengine.wav(os.path.join(out_dir, ('%s-%s.wav' % (m['name'], label.replace(' ', ''))).lower()), x)
             print('         %-7s %-7s %6.3f  %s%s' % (m['name'], label, peak, ('%.1f Hz' % f) if f else '-', '' if good else '   <-- FAILED'))
-    check(ok, 'machines 7 (MACRO) and 8 (SOPHIE), chosen by their machine number: the 12 engines sound, note 60 at 261.6 Hz (within 1.5 %) for the pitched ones')
+    check(ok, 'machines 7 (Plaits) and 8 (Sophie), chosen by their machine number: the 12 engines sound, note 60 at 261.6 Hz (within 1.5 %) for the pitched ones')
     # default knobs of each machine give a sound; PITCH and the other common knobs act
     ok = True
     for m in rep['machines']:
@@ -672,9 +679,9 @@ def sound(stock, new, payload, rep, out_dir):
         eng.set(0, **dict(kw, pitch=76))
         y = eng.render(400, trig_at=(1,), track=0)
         f0, f1 = frequency(x), frequency(y)
-        ok &= np.max(np.abs(x)) > 2**31 * 0.01 and (m['name'] != 'MACRO' or abs(f1 / f0 - 2) < 0.03) and not eng.unmapped
+        ok &= np.max(np.abs(x)) > 2**31 * 0.01 and (not is_plaits(m) or abs(f1 / f0 - 2) < 0.03) and not eng.unmapped
         print('         %s at its default knobs: peak %.3f, %.1f Hz; PITCH +12: %.1f Hz' % (m['name'], np.max(np.abs(x)) / 2**31, f0, f1))
-    check(ok, 'each added machine sounds at the default values of its knobs; PITCH +12 doubles the frequency (MACRO WSHAPE)')
+    check(ok, 'each added machine sounds at the default values of its knobs; PITCH +12 doubles the frequency (Plaits WSHAPE)')
     # machine locks on one track: stock and added machines in turn
     eng = engine(new, payload, only=0)
     order = [1, 6, 7, 4, 6, 0, 7, 5]
@@ -695,7 +702,7 @@ def sound(stock, new, payload, rep, out_dir):
         eng.set(t, machine=m['index'], note=48 + 3 * t, color=(24 + 8 * t) if t % 2 == 0 else 16 + 32 * (t // 2), shape=64, sweep=64, contour=64, decay=80)
     blocks = np.concatenate([eng.block(0x3f if b % 60 == 1 else 0) for b in range(180)], axis=1)
     check(np.all(np.max(np.abs(blocks), axis=1) > 2**31 * 0.01) and not eng.unmapped,
-          'six tracks at once, MACRO and SOPHIE alternating, triggered on the same block: all six sound, no stray memory access')
+          'six tracks at once, Plaits and Sophie alternating, triggered on the same block: all six sound, no stray memory access')
     stacks(stock, new, payload, rep, engine, defaults)
     return engine, defaults
 
@@ -735,16 +742,16 @@ def stacks(stock, new, payload, rep, engine, defaults):
         ref.append(use()[0])
     worst_n, worst_p, rows = 0, 0, []
     for m in rep['machines']:
-        n_eng, zone = (8, 8) if m['name'] == 'MACRO' else (4, 32)
+        n_eng, zone = (8, 8) if is_plaits(m) else (4, 32)
         for e in range(n_eng):
             eng = engine(new, payload, only=0)
             use = watch(eng)
             eng.set(0, machine=m['index'], note=60, punch=1, color=zone * e + zone // 2, shape=64, sweep=64, contour=64, decay=80)
             eng.render(60, trig_at=(1, 30), track=0)
             n, p = use()
-            rows.append('%s %d/%d' % ((MACRO if m['name'] == 'MACRO' else SOPHIE)[e], n, p))
+            rows.append('%s %d/%d' % ((PLAITS_ENGINES if is_plaits(m) else SOPHIE_ENGINES)[e], n, p))
             worst_n, worst_p = max(worst_n, n), max(worst_p, p)
-    # a long run: six tracks of MACRO, random engines, knobs, notes and gaps
+    # a long run: six tracks of Plaits, random engines, knobs, notes and gaps
     eng = engine(new, payload)
     use = watch(eng)
     rnd = random.Random(3)
@@ -763,12 +770,12 @@ def stacks(stock, new, payload, rep, engine, defaults):
     n, p = use()
     worst_n, worst_p = max(worst_n, n), max(worst_p, p)
     print('         bytes used below the voice loop / on the private stack: ' + ', '.join(rows))
-    print('         six tracks of MACRO, %d random steps, %d blocks: %d / %d' % (1200, blocks, n, p))
+    print('         six tracks of Plaits, %d random steps, %d blocks: %d / %d' % (1200, blocks, n, p))
     check(worst_n <= STACK_LIMIT and not eng.unmapped,
           'stack of the interrupted task: the added machines go %d bytes below the voice loop at most (limit set here: %d; stock machines: %d to %d)'
           % (worst_n, STACK_LIMIT, min(ref), max(ref)))
     check(0 < worst_p <= PRIVATE_BYTES // 2,
-          "MACRO's private stack: %d bytes used at most, of %d (limit set here: half)" % (worst_p, PRIVATE_BYTES))
+          "Plaits' private stack: %d bytes used at most, of %d (limit set here: half)" % (worst_p, PRIVATE_BYTES))
 
 
 def projects(stock, new, payload, rep, engine, defaults):
@@ -786,7 +793,7 @@ def projects(stock, new, payload, rep, engine, defaults):
             res[name, m] = (x, bool(eng.unmapped), struct.unpack('>I', eng.uc.mem_read(mcengine.VOICE0, 4))[0])
     ok = all(not res[k][1] for k in res)
     ok &= res['new', 6][2] == 6 and res['new', 7][2] == 7 and all(np.max(np.abs(res['new', m][0])) > 2**24 for m in (6, 7))
-    check(ok, 'this firmware: machine numbers 7 and 8 in the sound play MACRO and SOPHIE at the next trig (voice loop)')
+    check(ok, 'this firmware: machine numbers 7 and 8 in the sound play Plaits and Sophie at the next trig (voice loop)')
     ok = all(res['stock', m][2] == 5 and np.array_equal(res['stock', m][0], res['stock', 5][0]) for m in (6, 7, 8, 100))
     ok &= all(res['new', m][2] == 5 and np.array_equal(res['new', m][0], res['stock', 5][0]) for m in (8, 100))
     check(ok, 'official OS, sound with machine 7 or 8: the voice loop plays CHORD with the knob values of the sound, no stray access.\n'

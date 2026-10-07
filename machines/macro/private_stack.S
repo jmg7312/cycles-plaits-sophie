@@ -4,7 +4,7 @@
  *
  * Why: the Model:Cycles' audio interrupt does not switch stacks. It runs on the stack of whatever task it
  * interrupted, and the smallest task stack of OS 1.13 is 2 048 bytes. The stock machines use about 250 bytes
- * below the voice loop; macro_render() uses up to 1 700. So the MACRO adapter calls it through here, on a
+ * below the voice loop; macro_render() uses up to 1 700. So the Plaits adapter calls it through here, on a
  * 4 096-byte area of its own (macro_cycles.c).
  *
  *     void macro_on_private_stack(void *stack_top, void (*fn)(), a, b, c, d, e);    calls fn(a, b, c, d, e)

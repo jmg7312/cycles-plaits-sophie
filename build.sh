@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build the MACRO and Sophie machines for the Model:Cycles (ColdFire MCF5441x).
+# Build the Plaits and Sophie machines for the Model:Cycles (ColdFire MCF5441x).
 # Needs: m68k-linux-gnu-gcc and binutils (Debian/Ubuntu: apt install gcc-m68k-linux-gnu binutils-m68k-linux-gnu),
 # or set CROSS=m68k-elf- .
 # Output: build/macro.{elf,bin,sym} and build/sophie.{elf,bin,sym}, each linked alone at 0x43000000 (for

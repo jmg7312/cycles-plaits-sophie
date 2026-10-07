@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * machine_list.c - MACRO and SOPHIE in the Model:Cycles machine list (OS 1.13): the C part.
+ * machine_list.c - Plaits and Sophie in the Model:Cycles machine list (OS 1.13): the C part.
  *
  * The stock OS has six machines, and several of its tables and functions stop at six. This file holds the
  * tables that had to grow and the functions that replace four small OS accessors. hooks.S holds their
