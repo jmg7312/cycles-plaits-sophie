@@ -63,6 +63,12 @@ struct track {
 
 static struct track tracks[NVOICES];
 
+/* macro_render() runs on a stack of our own (private_stack.S says why). 4 096 bytes; it uses up to about
+ * 1 700. One for all voices: they are rendered one after the other. */
+#define STACK_BYTES 4096
+static uint32 macro_stack[STACK_BYTES / 4];
+void macro_on_private_stack(void *stack_top, void *fn, void *a, void *b, uint32 c, void *d, int32 e);
+
 /* Output level. macro_render() gives 16-bit samples; the OS works in 32 bits. With a shift of 16, its
  * full scale is the OS's full scale, so nothing can overflow. Measured in emulation at default knobs:
  * peaks 0.044-0.125 of full scale after the stock amp chain (stock machines: 0.076-0.212). */
@@ -145,7 +151,8 @@ void macro_cycles_render(int32 *out, void *v)
             out[i] = 0;
         return;
     }
-    macro_render(&tracks[t].mv, tracks[t].prm, tracks[t].inc, buf, 32);
+    macro_on_private_stack(macro_stack + STACK_BYTES / 4, macro_render,
+                           &tracks[t].mv, tracks[t].prm, tracks[t].inc, buf, 32);
     for (i = 0; i < 32; i++)
         out[i] = (int32)buf[i] << OUT_SHIFT;
 

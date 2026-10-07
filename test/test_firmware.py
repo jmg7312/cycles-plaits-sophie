@@ -12,7 +12,8 @@ stock OS next to it for comparison:
   boot      the bootstrap's own unpacker reads the packed OS; the boot hook installs the payload
   tables    the tables the OS builds at boot; every lookup by machine, knob, CC or descriptor
   screens   MACHINES screen, wheel, machine change with its default values, main-screen knobs
-  sound     the six stock machines sample for sample; MACRO and SOPHIE through their own machine numbers
+  sound     the six stock machines sample for sample; MACRO and SOPHIE through their own machine numbers;
+            how deep the added machines go on the stack
   projects  what a sound saved with machine 7 or 8 does, here and on the stock OS
 
 This is emulation, function by function: there is no emulator of the whole Model:Cycles. It proves what it
@@ -695,7 +696,79 @@ def sound(stock, new, payload, rep, out_dir):
     blocks = np.concatenate([eng.block(0x3f if b % 60 == 1 else 0) for b in range(180)], axis=1)
     check(np.all(np.max(np.abs(blocks), axis=1) > 2**31 * 0.01) and not eng.unmapped,
           'six tracks at once, MACRO and SOPHIE alternating, triggered on the same block: all six sound, no stray memory access')
+    stacks(stock, new, payload, rep, engine, defaults)
     return engine, defaults
+
+
+STACK_LIMIT = 450                           # bytes below the voice loop's entry; the stock machines use about 250
+PRIVATE_BYTES = 4096                        # machines/macro/macro_cycles.c
+
+
+def stacks(stock, new, payload, rep, engine, defaults):
+    """The audio interrupt runs on the stack of the task it interrupted, and the smallest task stack of the OS
+    is 2 048 bytes: a machine must not go much deeper than the stock ones. macro_render() needs up to 1 700
+    bytes, so it runs on a stack of its own. Lowest address written on each stack, over whole runs."""
+    import random
+    entry = mcengine.STACK - 0x100                          # where mcengine.Engine.block() enters the voice loop
+    priv = rep['symbols']['macro_stack']
+
+    def watch(eng):
+        low = dict(normal=entry, private=priv + PRIVATE_BYTES)
+
+        def normal(uc, access, addr, size, value, ud):
+            if addr < low['normal']:
+                low['normal'] = addr
+
+        def private(uc, access, addr, size, value, ud):
+            if addr < low['private']:
+                low['private'] = addr
+        eng.uc.hook_add(UC_HOOK_MEM_WRITE, normal, begin=0x90000000, end=entry - 1)
+        eng.uc.hook_add(UC_HOOK_MEM_WRITE, private, begin=priv - 0x400, end=priv + PRIVATE_BYTES - 1)
+        return lambda: (entry - low['normal'], priv + PRIVATE_BYTES - low['private'])
+
+    ref = []
+    for m in range(6):
+        eng = engine(stock, None, only=0)
+        use = watch(eng)
+        eng.set(0, **dict(defaults(m), machine=m, note=60, punch=1))
+        eng.render(60, trig_at=(1,), track=0)
+        ref.append(use()[0])
+    worst_n, worst_p, rows = 0, 0, []
+    for m in rep['machines']:
+        n_eng, zone = (8, 8) if m['name'] == 'MACRO' else (4, 32)
+        for e in range(n_eng):
+            eng = engine(new, payload, only=0)
+            use = watch(eng)
+            eng.set(0, machine=m['index'], note=60, punch=1, color=zone * e + zone // 2, shape=64, sweep=64, contour=64, decay=80)
+            eng.render(60, trig_at=(1, 30), track=0)
+            n, p = use()
+            rows.append('%s %d/%d' % ((MACRO if m['name'] == 'MACRO' else SOPHIE)[e], n, p))
+            worst_n, worst_p = max(worst_n, n), max(worst_p, p)
+    # a long run: six tracks of MACRO, random engines, knobs, notes and gaps
+    eng = engine(new, payload)
+    use = watch(eng)
+    rnd = random.Random(3)
+    for t in range(6):
+        eng.set(t, machine=rep['machines'][0]['index'], decay=100)
+    blocks = 0
+    for step in range(1200):
+        mask = rnd.randrange(1, 64)
+        for t in range(6):
+            if mask >> t & 1:
+                eng.set(t, color=rnd.randrange(128), shape=rnd.randrange(128), sweep=rnd.randrange(128),
+                        contour=rnd.randrange(128), note=rnd.randrange(12, 109), punch=rnd.randrange(2), pitch=rnd.randrange(40, 89))
+        for b in range(rnd.randrange(1, 6)):
+            eng.block(mask if b == 0 else 0)
+            blocks += 1
+    n, p = use()
+    worst_n, worst_p = max(worst_n, n), max(worst_p, p)
+    print('         bytes used below the voice loop / on the private stack: ' + ', '.join(rows))
+    print('         six tracks of MACRO, %d random steps, %d blocks: %d / %d' % (1200, blocks, n, p))
+    check(worst_n <= STACK_LIMIT and not eng.unmapped,
+          'stack of the interrupted task: the added machines go %d bytes below the voice loop at most (limit set here: %d; stock machines: %d to %d)'
+          % (worst_n, STACK_LIMIT, min(ref), max(ref)))
+    check(0 < worst_p <= PRIVATE_BYTES // 2,
+          "MACRO's private stack: %d bytes used at most, of %d (limit set here: half)" % (worst_p, PRIVATE_BYTES))
 
 
 def projects(stock, new, payload, rep, engine, defaults):
@@ -722,7 +795,7 @@ def projects(stock, new, payload, rep, engine, defaults):
 
 # ---- main -------------------------------------------------------------------------------------------------
 def main():
-    global Uc, UcError, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN, UC_HOOK_MEM_UNMAPPED, UC_HOOK_CODE, mk, np, mcengine, CPU
+    global Uc, UcError, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN, UC_HOOK_MEM_UNMAPPED, UC_HOOK_MEM_WRITE, UC_HOOK_CODE, mk, np, mcengine, CPU
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--modded', required=True, help='a checkout of github.com/18nelli18/Modded-Cycles')
     ap.add_argument('--cycles', required=True, help='the official model-cycles_OS1.13.syx')
@@ -736,7 +809,7 @@ def main():
     import numpy as np
     import emac
     import mcengine
-    from unicorn import Uc, UcError, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN, UC_HOOK_MEM_UNMAPPED, UC_HOOK_CODE
+    from unicorn import Uc, UcError, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN, UC_HOOK_MEM_UNMAPPED, UC_HOOK_MEM_WRITE, UC_HOOK_CODE
     from unicorn import m68k_const as mk
     if args.fast:
         emac.EMAC.install = lambda self, instrs: 0

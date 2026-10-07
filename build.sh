@@ -18,8 +18,9 @@ mkdir -p build
 ${CROSS}gcc $CFLAGS -I$D1 -c $P/macro_cycles.c -o build/macro_cycles.o
 ${CROSS}gcc $CFLAGS -I$D1 -c $D1/macro.c -o build/macro.o
 ${CROSS}gcc $CFLAGS -I$D1 -c $D1/mono.c -o build/mono.o
+${CROSS}gcc -mcpu=54418 -c $P/private_stack.S -o build/private_stack.o
 ${CROSS}ld -T $P/link.ld --gc-sections --no-warn-rwx-segments -o build/macro.elf \
-    build/macro_cycles.o build/macro.o build/mono.o
+    build/macro_cycles.o build/private_stack.o build/macro.o build/mono.o
 
 ${CROSS}gcc $CFLAGS -I$DS -c $S/sophie_cycles.c -o build/sophie_cycles.o
 ${CROSS}gcc $CFLAGS -I$DS -c $DS/sophie.c -o build/sophie.o
@@ -39,7 +40,7 @@ F=firmware
 ${CROSS}gcc $CFLAGS -I$F -c $F/machine_list.c -o build/machine_list.o
 ${CROSS}gcc -mcpu=54418 -I$F -c $F/hooks.S -o build/hooks.o
 ${CROSS}ld -T $F/link.ld --gc-sections --no-warn-rwx-segments -o build/payload.elf \
-    build/hooks.o build/machine_list.o build/macro_cycles.o build/macro.o \
+    build/hooks.o build/machine_list.o build/macro_cycles.o build/private_stack.o build/macro.o \
     build/sophie_cycles.o build/sophie.o build/mono.o
 if [ -n "$(${CROSS}nm -u build/payload.elf)" ]; then echo "undefined symbols in payload"; exit 1; fi
 ${CROSS}nm -n build/payload.elf > build/payload.sym

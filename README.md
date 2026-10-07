@@ -33,6 +33,13 @@ They read the track's knobs, compute the pitch the way the stock pitch code does
 TUNE), call the engine, and then run the **stock** amp envelope, VCA and PUNCH stage, set up as the stock
 TONE machine sets them up. So DECAY, PUNCH and GATE behave as on any stock machine.
 
+The MACRO adapter calls `macro_render()` on **a stack of its own** (4 096 bytes, `machines/macro/private_stack.S`).
+The Cycles' audio interrupt does not switch stacks: it runs on the stack of whatever task it interrupted, the
+smallest of which is 2 048 bytes, and the stock machines use about 250 bytes of it. `macro_render()` needs up
+to 1 700. On its own stack it uses 1 556 bytes at most in our runs, and the adapter stays at 248 bytes on the
+task's stack, the level of the stock machines (emulation; the figures on the OS's stacks come from reading
+the OS, not from hardware).
+
 **What is missing:** adding the machines to the OS's machine list (names, knob descriptors, MACHINES
 screen). Existing mods already do that for their own machines (Modded-Cycles for its Syntakt engines,
 Model-TG for its Sampler); the same has to be done for these. Nothing here builds a flashable firmware,
