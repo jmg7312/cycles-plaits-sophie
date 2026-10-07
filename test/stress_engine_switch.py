@@ -7,7 +7,7 @@ astray, or a block whose cost jumps when the engine changes.
 
 Every trig picks a random engine, random HARMONICS / TIMBRE / MORPH, a random note and a random gap to the
 next trig (1 to 6 blocks, so notes are cut short). For every block it counts the instructions executed and
-keeps the worst block per (previous engine -> new engine).
+keeps the worst note-start block per (previous engine -> new engine).
 
     python3 test/stress_engine_switch.py --modded PATH/TO/Modded-Cycles --cycles model-cycles_OS1.13.syx \
         [--trigs 2000] [--seed 1] [--fast]
@@ -99,11 +99,15 @@ def main():
             uc.emu_stop()
     eng.uc.hook_add(UC_HOOK_CODE, tick)
 
+    # A note starts in the block AFTER the one where the trig is asked for: the voice loop hands the trig to
+    # the machine one block late (v + 0x38), and the machine reads the engine knob then. So the cost of a
+    # switch is the cost of that block, and the engine switched to is the one the knob shows in that block.
     rnd = random.Random(args.seed)
-    worst = {}                               # (previous, new) -> (instructions, block kind)
+    worst = {}                               # (previous engine, new engine) -> (instructions, knobs)
     worst_any = (0, None)
     hung, total_blocks, peak = [], 0, 0.0
-    prev = None
+    sounding = None                          # the engine of the note that last started
+    asked = False                            # a trig was asked for in the previous block
     for t in range(args.trigs):
         e = rnd.randrange(8)
         knobs = dict(color=8 * e + rnd.randrange(8), shape=rnd.randrange(128), sweep=rnd.randrange(128),
@@ -118,16 +122,17 @@ def main():
             n = count[0]
             peak = max(peak, float(np.max(np.abs(x))) / 2**31)
             if n > BLOCK_LIMIT or eng.unmapped:
-                hung.append((t, b, prev, e, n, knobs, list(eng.unmapped[:3])))
+                hung.append((t, b, sounding, e, n, knobs, list(eng.unmapped[:3])))
                 break
-            key = (prev, e)
-            if b == 0 and n > worst.get(key, (0,))[0]:
-                worst[key] = (n, knobs)
             if n > worst_any[0]:
-                worst_any = (n, (t, b, prev, e, knobs))
+                worst_any = (n, (t, b, sounding, e, knobs))
+            if asked:                        # this block starts a note, on engine e
+                if n > worst.get((sounding, e), (0,))[0]:
+                    worst[(sounding, e)] = (n, knobs)
+                sounding = e
+            asked = b == 0
         if hung:
             break
-        prev = e
 
     print('%d trigs, %d blocks, seed %d; peak output %.3f of full scale' % (t + 1, total_blocks, args.seed, peak))
     if hung:
@@ -137,9 +142,9 @@ def main():
                  ['pc %08x addr %08x' % u for u in um]))
         sys.exit(1)
     n, (t, b, p, e, knobs) = worst_any
-    print('worst block: %d instructions (trig %d, block %d after it, %s -> %s, %s)'
+    print('worst block: %d instructions (trig %d, block %d after it, sounding %s, knob on %s, %s)'
           % (n, t, b, ENGINES[p] if p is not None else '-', ENGINES[e], knobs))
-    print('\nworst trig block, instructions, by engine switched to (rows: from, columns: to):')
+    print('\nworst note-start block, instructions, by engine switched to (rows: from, columns: to):')
     print('%-7s' % '' + ''.join('%8s' % x[:7] for x in ENGINES))
     for p in range(8):
         print('%-7s' % ENGINES[p][:7] + ''.join('%8d' % worst.get((p, e), (0,))[0] for e in range(8)))
