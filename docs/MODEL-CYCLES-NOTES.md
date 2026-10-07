@@ -216,6 +216,14 @@ attempts on hardware) and notes 19 and 20 (more machines). In short, what has to
 - setting a track's machine: `0x4001477E`, and the wheel `0x4001488A`, both bounded at 5;
 - the per-machine records (seven of 76 bytes at `0x40A71540`).
 
+**A limit on the number of machines.** In Modded-Cycles' method every added machine gets five descriptors
+of its own (four knobs and an Amp Decay). The accessors of the descriptor table bound the index with
+`moveq #75` / `moveq #76` at 43 sites (`BOUNDS` in its `tools/gen_sdvintage_7th.py`), and `moveq` takes a
+signed 8-bit value: 127 descriptors at most, so (127 - 76) / 5 = **10 added machines in all, every mod
+together**. Its generator sets its own limit at 6. Going further means machines sharing descriptors, or
+rewriting those sites. This is our reading of its generator, not something we tried. It is why the two
+machines of this repository hold several engines each, picked by a knob.
+
 The screen shows the **long name** of a knob when it is turned, split at spaces, one word per line; words
 up to 8 letters fit. A 5-letter machine name is known to fit the MACHINES screen. [MC] note 18 §10
 
