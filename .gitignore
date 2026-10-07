@@ -3,3 +3,5 @@ out/
 __pycache__/
 test/run-local-example.sh
 test/run-local-stress.sh
+test/run-local-firmware.sh
+*.syx
