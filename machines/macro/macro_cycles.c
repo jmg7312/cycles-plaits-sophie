@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * plaits_cycles.c - Plaits' engines as Model:Cycles machines (OS 1.13).
+ * macro_cycles.c - the MACRO engines as Model:Cycles machines (OS 1.13).
  *
  * This file is only the adapter between the Model:Cycles voice loop and the synthesis code. The synthesis
- * is not here: it is third_party/digi1_mods/macro.c, the fixed-point port of Plaits made for the Digitakt
- * mk1 by the digi1_mods authors (MIT), itself a restatement of Plaits by Emilie Gillet (MIT). That code is
- * used unmodified.
+ * is not here: it is third_party/digi1_mods/macro.c, digi1_mods' MACRO machine for the Digitakt mk1 (MIT):
+ * engines ported to fixed point from Plaits by Emilie Gillet (MIT). That code is used unmodified, and the
+ * machines keep the names digi1_mods gave them.
  *
  * Machine contract of the Model:Cycles (OS 1.13), as documented in Modded-Cycles (notes/14) and checked
  * against the stock machines:
@@ -20,7 +20,7 @@
  * One machine per engine (the engine does not take a knob; a machine lock changes it per step):
  *   WSHAPE, 2OP FM, NOISE, PARTCL, BDRUM, SNARE, HIHAT, GRAIN.
  * Knobs:
- *   COLOR   = AUX        0-55 Plaits' OUT, 72-127 its AUX output, 56-71 a crossfade
+ *   COLOR   = AUX        0-55 the engine's OUT, 72-127 its AUX output, 56-71 a crossfade
  *   SHAPE   = HARMONICS
  *   SWEEP   = TIMBRE
  *   CONTOUR = MORPH
@@ -60,7 +60,7 @@ struct track {
 
 static struct track tracks[NVOICES];
 
-/* Output level. macro_render() gives 16-bit samples; the OS works in 32 bits. With a shift of 16, Plaits'
+/* Output level. macro_render() gives 16-bit samples; the OS works in 32 bits. With a shift of 16, its
  * full scale is the OS's full scale, so nothing can overflow. Measured in emulation at default knobs:
  * peaks 0.044-0.125 of full scale after the stock amp chain (stock machines: 0.076-0.212). */
 #define OUT_SHIFT 16
@@ -131,16 +131,16 @@ static void update(int32 pmod, void *v, const void *p, int32 engine)
     }
 }
 
-void plaits_update_wshape(int32 pmod, void *v, const void *p) { update(pmod, v, p, MACRO_WSH); }
-void plaits_update_2opfm(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_FM); }
-void plaits_update_noise(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_NOISE); }
-void plaits_update_partcl(int32 pmod, void *v, const void *p) { update(pmod, v, p, MACRO_PARTICLE); }
-void plaits_update_bdrum(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_BD); }
-void plaits_update_snare(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_SD); }
-void plaits_update_hihat(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_HH); }
-void plaits_update_grain(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_GRAIN); }
+void macro_cycles_update_wshape(int32 pmod, void *v, const void *p) { update(pmod, v, p, MACRO_WSH); }
+void macro_cycles_update_2opfm(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_FM); }
+void macro_cycles_update_noise(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_NOISE); }
+void macro_cycles_update_partcl(int32 pmod, void *v, const void *p) { update(pmod, v, p, MACRO_PARTICLE); }
+void macro_cycles_update_bdrum(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_BD); }
+void macro_cycles_update_snare(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_SD); }
+void macro_cycles_update_hihat(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_HH); }
+void macro_cycles_update_grain(int32 pmod, void *v, const void *p)  { update(pmod, v, p, MACRO_GRAIN); }
 
-void plaits_render(int32 *out, void *v)
+void macro_cycles_render(int32 *out, void *v)
 {
     uint32 t = ((uint32)v - VOICE0) / VSTRIDE;
     int16 buf[32];

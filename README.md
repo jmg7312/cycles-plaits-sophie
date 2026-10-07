@@ -1,7 +1,8 @@
-# Plaits and Sophie machines for the Elektron Model:Cycles
+# MACRO and Sophie machines for the Elektron Model:Cycles
 
-Twelve extra synth machines for the Model:Cycles (OS 1.13): the eight engines of **Plaits** and the four
-models of **Sophie**, running inside the Cycles' own voice loop next to the stock FM machines.
+Twelve extra synth machines for the Model:Cycles (OS 1.13): the eight **MACRO** engines of digi1_mods
+(ported from Plaits) and the four models of **Sophie**, running inside the Cycles' own voice loop next to
+the stock FM machines.
 
 > **Status: emulation only. This has NOT been flashed to or tested on a real Model:Cycles.**
 > Everything below was measured in [Modded-Cycles](https://github.com/18nelli18/Modded-Cycles)' emulation
@@ -10,11 +11,12 @@ models of **Sophie**, running inside the Cycles' own voice loop next to the stoc
 
 ## What this is, and what it is not
 
-The synthesis code is not ours. People already ported Plaits and Sophie to this CPU (ColdFire MCF5441x,
-no FPU) for the Digitakt mk1:
+The synthesis code is not ours. It already exists for this CPU (ColdFire MCF5441x, no FPU), made for the
+Digitakt mk1:
 
-- **Plaits**: `macro.c` from [digi1_mods](https://github.com/gdeo607/digi1_mods) (MIT), a fixed-point port
-  of [Plaits](https://github.com/pichenettes/eurorack) by Emilie Gillet (MIT).
+- **MACRO**: `macro.c` from [digi1_mods](https://github.com/gdeo607/digi1_mods) (MIT), engines ported to
+  fixed point from [Plaits](https://github.com/pichenettes/eurorack) by Emilie Gillet (MIT). The machines
+  keep the names digi1_mods gave them.
 - **Sophie**: `sophie.c` from [digisophie](https://github.com/soejrd/digisophie) (MIT), a fixed-point
   adaptation of [Sophie for Schwung](https://github.com/mestela/schwung-sophie) by Matt Estela (MIT).
 
@@ -24,7 +26,7 @@ nothing else.
 What this repository adds is the **adapter** between that code and the Model:Cycles machine contract
 (`update(pmod, voice, params)` once per 32-sample block, then `render(out, voice)`), two short C files:
 
-- `machines/plaits/plaits_cycles.c`
+- `machines/macro/macro_cycles.c`
 - `machines/sophie/sophie_cycles.c`
 
 They read the track's knobs, compute the pitch the way the stock pitch code does (note + PITCH + FINE
@@ -36,36 +38,40 @@ screen). Existing mods already do that for their own machines (Modded-Cycles for
 Model-TG for its Sampler); the same has to be done for these. Nothing here builds a flashable firmware,
 and where this code should end up is an open question.
 
+**For loader and firmware authors:** [docs/MODEL-CYCLES-NOTES.md](docs/MODEL-CYCLES-NOTES.md) gathers what
+we know about the Model:Cycles OS 1.13 (file format, a draft device profile, memory map, the machine
+tables and contract, UI and MIDI entry points, what existing mods occupy), each fact with its source.
+
 ## The machines
 
 One machine per engine. The engine does not take a knob; to change engine per step, use a machine lock.
 
-| Menu name | Engine | Plaits engine |
+| Menu name | Engine (digi1_mods' name) | What it is |
 |---|---|---|
-| `PL_WSHAP` | WSHAPE | waveshaping oscillator |
-| `PL_2OPFM` | 2OP FM | two-operator FM |
-| `PL_NOISE` | NOISE | filtered clocked noise |
-| `PL_PARTC` | PARTCL | particle noise |
-| `PL_BDRUM` | BDRUM | bass drum |
-| `PL_SNARE` | SNARE | snare drum |
-| `PL_HIHAT` | HIHAT | hi-hat |
-| `PL_GRAIN` | GRAIN | granular formant oscillator |
+| `MA_WSHAP` | WSHAPE | waveshaping oscillator |
+| `MA_2OPFM` | 2OP FM | two-operator FM |
+| `MA_NOISE` | NOISE | filtered clocked noise |
+| `MA_PARTC` | PARTCL | particle noise |
+| `MA_BDRUM` | BDRUM | bass drum |
+| `MA_SNARE` | SNARE | snare drum |
+| `MA_HIHAT` | HIHAT | hi-hat |
+| `MA_GRAIN` | GRAIN | granular formant oscillator |
 | `SO_FUSE` | FUSE | Sophie model 0 |
 | `SO_BOOM` | BOOM | Sophie model 1 |
 | `SO_PIPE` | PIPE | Sophie model 2 |
 | `SO_SHARD` | SHARD | Sophie model 3 |
 
-The names are a proposal: a two-letter prefix per family (`PL_`, `SO_`; `SK_` would suit the Syntakt
-engines) and five letters. **Whether eight characters fit the MACHINES screen has not been checked**; five
+The names are a proposal: a two-letter prefix per family (`MA_` for MACRO, `SO_` for Sophie; `SK_` would
+suit the Syntakt engines) and five letters. **Whether eight characters fit the MACHINES screen has not been checked**; five
 are known to fit.
 
 ### Knobs
 
-| Knob | Plaits machines | Sophie machines |
+| Knob | MACRO machines | Sophie machines |
 |---|---|---|
 | PITCH | pitch (as stock) | pitch (as stock) |
 | DECAY | amp decay (stock envelope) | amp decay (stock envelope) |
-| COLOR | **AUX**: 0-55 Plaits' OUT, 72-127 its AUX output, 56-71 crossfade | **COLOR** |
+| COLOR | **AUX**: 0-55 the engine's OUT, 72-127 its AUX output, 56-71 crossfade | **COLOR** |
 | SHAPE | **HARMONICS** | **METAL** |
 | SWEEP | **TIMBRE** | **SWEEP** (bipolar, 64 = centre) |
 | CONTOUR | **MORPH** | **FBK** (feedback) |
@@ -76,29 +82,29 @@ is a second layer on the SHAPE knob, hold PRESET MENU and turn SHAPE, the way Mo
 
 ## Measurements (emulation)
 
-Note 60, default knobs (Plaits: HARMONICS/TIMBRE/MORPH 64; Sophie: 64/64/64, FBK 32), DECAY 80.
+Note 60, default knobs (MACRO: HARMONICS/TIMBRE/MORPH 64; Sophie: 64/64/64, FBK 32), DECAY 80.
 
 **Cost**: instructions per 32-sample block for one voice, counted in the emulated voice loop (the loop
 alone, with no voice, is 1610). It is an instruction count, not a time on hardware.
 
-| Stock machine | | Plaits | | Sophie | |
+| Stock machine | | MACRO | | Sophie | |
 |---|---|---|---|---|---|
-| TONE | 5291 | PL_WSHAP | 5343 | SO_FUSE | 5579 |
-| PERC | 6079 | PL_NOISE | 5390 | SO_PIPE | 5780 |
-| METAL | 6431 | PL_2OPFM | 5463 | SO_BOOM | 5932 |
-| SNARE | 7157 | PL_SNARE | 6813 | SO_SHARD | 6447 |
-| KICK | 7416 | PL_GRAIN | 7428 | | |
-| CHORD | 8294 | PL_HIHAT | 7656 | | |
-| | | PL_BDRUM | 8187 | | |
-| | | PL_PARTC | 9193 | | |
+| TONE | 5291 | MA_WSHAP | 5343 | SO_FUSE | 5579 |
+| PERC | 6079 | MA_NOISE | 5390 | SO_PIPE | 5780 |
+| METAL | 6431 | MA_2OPFM | 5463 | SO_BOOM | 5932 |
+| SNARE | 7157 | MA_SNARE | 6813 | SO_SHARD | 6447 |
+| KICK | 7416 | MA_GRAIN | 7428 | | |
+| CHORD | 8294 | MA_HIHAT | 7656 | | |
+| | | MA_BDRUM | 8187 | | |
+| | | MA_PARTC | 9193 | | |
 
 **Level**: peak after the stock amp chain, as a fraction of full scale. Stock machines 0.076-0.212;
-Plaits machines 0.044-0.125; Sophie machines 0.055-0.068.
+MACRO machines 0.044-0.125; Sophie machines 0.055-0.068.
 
 **Pitch**: note 60 plays 262-264 Hz (expected 261.6; the measurement is to the nearest sample period).
 PITCH +12 gives 522 Hz, -12 gives 131 Hz; FINE TUNE +32 is one semitone.
 
-**Size**: Plaits 38 kB of code, 7.6 kB of tables, 1.7 kB of state for six voices. Sophie 4.5 kB of code,
+**Size**: MACRO 38 kB of code, 7.6 kB of tables, 1.7 kB of state for six voices. Sophie 4.5 kB of code,
 2.6 kB of tables, 0.6 kB of state. Both modules are linked at `0x43000000`, the free SDRAM above the OS's
 BSS that Modded-Cycles uses for its payload.
 
@@ -109,7 +115,7 @@ sudo apt install gcc-m68k-linux-gnu binutils-m68k-linux-gnu     # Debian / Ubunt
 ./build.sh
 ```
 
-Output: `build/plaits.{elf,bin,sym}` and `build/sophie.{elf,bin,sym}`. `CROSS=m68k-elf- ./build.sh` uses
+Output: `build/macro.{elf,bin,sym}` and `build/sophie.{elf,bin,sym}`. `CROSS=m68k-elf- ./build.sh` uses
 another toolchain prefix. Flags: `-mcpu=54418 -O2 -ffreestanding -nostdlib`, as Modded-Cycles builds its
 own C machines.
 
@@ -134,21 +140,22 @@ With a stock Unicorn the bench emulates the EMAC in Python and is slow: about a 
 (`tools/install-patched-unicorn.sh` there): the EMAC then runs natively, the output is bit-identical, and
 the whole test takes a few seconds.
 
-One thing the bench needed: its Python EMAC does not know `move.l ACCext01,Dn`, which the Plaits port uses
+One thing the bench needed: its Python EMAC does not know `move.l ACCext01,Dn`, which `macro.c` uses
 to save and restore the EMAC state around its own use. The test adds it at run time; `mcengine.py` and
 `emac.py` are not modified.
 
 ## Layout
 
 ```
-machines/plaits/plaits_cycles.c      the Plaits adapter
-machines/plaits/link.ld
-machines/plaits/third_party/digi1_mods/   macro.c, mono.c and their headers, unmodified (MIT)
+machines/macro/macro_cycles.c        the MACRO adapter
+machines/macro/link.ld
+machines/macro/third_party/digi1_mods/    macro.c, mono.c and their headers, unmodified (MIT)
 machines/sophie/sophie_cycles.c      the Sophie adapter
 machines/sophie/link.ld
 machines/sophie/third_party/digisophie/   sophie.c and its headers, unmodified (MIT)
 build.sh
 test/play_machines.py
+docs/MODEL-CYCLES-NOTES.md           notes on the OS for loader and firmware authors
 THIRD_PARTY.md
 ```
 

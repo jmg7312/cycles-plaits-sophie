@@ -2,15 +2,16 @@
 
 Copied unmodified (line endings normalised to LF), each with its licence file next to it.
 
-## digi1_mods: the fixed-point port of Plaits
+## digi1_mods: the MACRO engines
 
-- Files: `machines/plaits/third_party/digi1_mods/` (`macro.c`, `macro.h`, `macro_tables.h`, `mono.c`,
+- Files: `machines/macro/third_party/digi1_mods/` (`macro.c`, `macro.h`, `macro_tables.h`, `mono.c`,
   `mono.h`, `mono_tables.h`), from `mods/digimono/`.
 - Source: <https://github.com/gdeo607/digi1_mods>, commit `c86c7f1ee8524dd9835d60b6d74a4777f806f07b`.
 - Licence: MIT, Copyright (c) 2026 the digi1_mods authors (`LICENSE` in that folder).
 - `macro.c` restates Plaits (<https://github.com/pichenettes/eurorack>, `plaits/dsp`) in fixed point:
   Copyright 2016 Emilie Gillet, MIT. The licence text is at the top of `macro.c` and `macro_tables.h`.
-  Plaits is a Mutable Instruments product; this is an unofficial use of its published code.
+  Plaits is a Mutable Instruments product; this is an unofficial use of its published code, and following
+  its author's guidelines for derivative works the machines here do not carry the module's name.
 
 ## digisophie: Sophie for Digitakt
 

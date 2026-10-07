@@ -6,7 +6,7 @@
  * is third_party/digisophie/sophie.c: Sophie for Digitakt by soejrd (MIT), a fixed-point adaptation of
  * Sophie for Schwung by Matt Estela (MIT). That code is used unmodified.
  *
- * Same machine contract as machines/plaits/plaits_cycles.c: update(pmod, v, p), then render(out, v).
+ * Same machine contract as machines/macro/macro_cycles.c: update(pmod, v, p), then render(out, v).
  *
  * One machine per model: FUSE, BOOM, PIPE, SHARD (the model does not take a knob).
  * Knobs:

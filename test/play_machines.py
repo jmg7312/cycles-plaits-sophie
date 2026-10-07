@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Play the Plaits and Sophie machines in the real Model:Cycles voice loop, emulated.
+"""Play the MACRO and Sophie machines in the real Model:Cycles voice loop, emulated.
 
 It uses Modded-Cycles' own bench, tools/emu/mcengine.py, unmodified. In the emulated memory only, each
 machine takes SNARE's place in the OS's two machine tables (render 0x40118614, update 0x4011862c) and the
@@ -9,8 +9,8 @@ MAIN OS is read from YOUR official model-cycles_OS1.13.syx.
     python3 test/play_machines.py --modded PATH/TO/Modded-Cycles --cycles model-cycles_OS1.13.syx [--cost] [--fast]
 
 For each of the 12 machines: a 0.5 s note (note 60, default knobs) written to out/<machine>.wav, its peak
-level, and for the pitched ones the measured frequency. Plaits machines are played twice: COLOR = 0 (Plaits'
-OUT) and COLOR = 127 (its AUX output).
+level, and for the pitched ones the measured frequency. MACRO machines are played twice: COLOR = 0 (the
+engine's OUT) and COLOR = 127 (its AUX output).
 
 --cost  also counts the instructions per 32-sample block for one voice, for every machine here and for the
         six stock machines (slow).
@@ -33,10 +33,10 @@ RENDER_TAB, UPDATE_TAB = 0x40118610, 0x40118628
 SLOT = 1                                    # SNARE's index in the machine tables
 IDLE_LOOP = None
 
-PLAITS = [('WSHAPE', 'wshape'), ('2OP FM', '2opfm'), ('NOISE', 'noise'), ('PARTCL', 'partcl'),
+MACRO = [('WSHAPE', 'wshape'), ('2OP FM', '2opfm'), ('NOISE', 'noise'), ('PARTCL', 'partcl'),
           ('BDRUM', 'bdrum'), ('SNARE', 'snare'), ('HIHAT', 'hihat'), ('GRAIN', 'grain')]
 SOPHIE = ['fuse', 'boom', 'pipe', 'shard']
-PITCHED = {'PL_WSHAP', 'PL_2OPFM', 'PL_GRAIN'}
+PITCHED = {'MA_WSHAP', 'MA_2OPFM', 'MA_GRAIN'}
 
 
 def main_os(modded, syx):
@@ -89,7 +89,7 @@ def main():
         mcengine._emac_payload = lambda payload, dst=mcengine.PAYLOAD_DST: {}
         mcengine.mk.UC_CPU_M68K_ANY = mcengine.mk.UC_CPU_M68K_CFV4E
     else:
-        # The bench's Python EMAC does not know "move.l ACCext01 <-> Dn", which the Plaits port uses to save
+        # The bench's Python EMAC does not know "move.l ACCext01 <-> Dn", which macro.c uses to save
         # and restore the EMAC around its own use. Added here, not in the bench: the value is kept as is.
         slow = emac.EMAC._slow
 
@@ -118,11 +118,11 @@ def main():
         return eng
 
     cases = []
-    psym, pblob = load('plaits')
-    for label, fn in PLAITS:
-        name = 'PL_' + label.replace(' ', '')[:5]
+    psym, pblob = load('macro')
+    for label, fn in MACRO:
+        name = 'MA_' + label.replace(' ', '')[:5]
         for color, tag in ((0, 'out'), (127, 'aux')):
-            cases.append((name, tag, pblob, psym, psym['plaits_update_' + fn], psym['plaits_render'],
+            cases.append((name, tag, pblob, psym, psym['macro_cycles_update_' + fn], psym['macro_cycles_render'],
                           dict(color=color, shape=64, sweep=64, contour=64, decay=80)))
     ssym, sblob = load('sophie')
     for m in SOPHIE:
